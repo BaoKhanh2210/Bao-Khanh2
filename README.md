@@ -45,7 +45,9 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Trình duyệt sẽ tự mở tại `http://localhost:8501`. Chọn từng bài ở thanh bên trái; các thanh trượt (ngân sách, hệ số công bằng λ, chiết khấu ρ, trọng số AI, số episodes…) cho phép chạy lại mô hình theo thời gian thực.
+Trình duyệt sẽ tự mở tại `http://localhost:8501`. Chọn từng bài ở thanh bên trái; các thanh trượt (ngân sách, hệ số công bằng λ, chiết khấu ρ, trọng số AI, số episodes…) cho phép chạy lại mô hình theo thời gian thực. Ngoài 12 bài còn có trang **Tổng quan** (xem & tải 3 bộ dữ liệu CSV) và trang **Phụ lục** (rubric chấm điểm, bảng phương pháp, bảng thuật ngữ).
+
+`app.py` được tổ chức 5 phần rõ ràng: (0) import & cấu hình, (1) lớp dữ liệu với 3 bộ dữ liệu chuẩn, (2) tiện ích chung, (3) lớp giải 12 bài, (4) lớp giao diện 14 trang, (5) điểm vào & điều hướng.
 
 > Mọi con số trong dashboard được **tính trực tiếp** bằng `numpy / scipy / PuLP / pymoo` mỗi khi mở trang — không hard-code, nên hoàn toàn tái lập được.
 
