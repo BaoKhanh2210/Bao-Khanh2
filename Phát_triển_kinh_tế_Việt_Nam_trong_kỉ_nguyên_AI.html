@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIDEOM-VN · Analytics Terminal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --bg:#0A0D14; --bg2:#070A10; --grid:rgba(45,212,191,.05);
+  --panel:#0F141E; --panel-2:#131926; --ink:#E8EDF4; --soft:#94A3B8; --dim:#64748B;
+  --line:#1E2735; --line-2:#172030;
+  --acc:#2DD4BF; --acc-2:#22D3EE; --mag:#FB7185; --amber:#FBBF24; --lime:#4ADE80; --blue:#60A5FA; --violet:#C084FC;
+  --glow:0 0 0 1px rgba(45,212,191,.15), 0 0 24px -6px rgba(45,212,191,.25);
+  --shadow:0 18px 50px -28px rgba(0,0,0,.8);
+  --sb-w:264px;
+}
+[data-theme="light"]{
+  --bg:#EEF1F5; --bg2:#E4E8EE; --grid:rgba(15,118,110,.05);
+  --panel:#FFFFFF; --panel-2:#F6F8FB; --ink:#0B1220; --soft:#475569; --dim:#94A3B8;
+  --line:#DCE3EC; --line-2:#E6ECF3; --acc:#0D9488; --acc-2:#0891B2;
+  --glow:0 0 0 1px rgba(13,148,136,.18),0 8px 24px -12px rgba(13,148,136,.3);
+  --shadow:0 14px 40px -22px rgba(20,40,60,.4);
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;color:var(--ink);font-family:"Inter",system-ui,sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  background-color:var(--bg);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px),radial-gradient(700px 380px at 100% -5%, rgba(34,211,238,.10), transparent 60%),radial-gradient(600px 360px at 0% 0%, rgba(192,132,252,.07), transparent 60%);
+  background-size:46px 46px,46px 46px,100% 100%,100% 100%;background-attachment:fixed;transition:background-color .4s,color .25s;}
+a{color:inherit;text-decoration:none;}
+::selection{background:var(--acc);color:#06231f;}
+::-webkit-scrollbar{width:10px;height:10px;}::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--line);}::-webkit-scrollbar-thumb:hover{background:var(--acc);}
+
+/* HEADER */
+.hbar{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);}
+.hbar-in{display:flex;align-items:center;gap:16px;padding:0 24px;height:60px;}
+.brand{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:19px;letter-spacing:.02em;display:flex;align-items:center;gap:9px;}
+.brand .sq{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--acc),var(--acc-2));box-shadow:var(--glow);display:grid;place-items:center;color:#06231f;font-size:12px;font-weight:900;}
+.brand b{color:var(--acc);}
+.status{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--soft);display:flex;align-items:center;gap:7px;}
+.status .dot{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+.hbar .sp{flex:1;}
+.theme-btn{background:var(--panel);border:1px solid var(--line);color:var(--soft);width:38px;height:38px;border-radius:9px;cursor:pointer;font-size:15px;transition:.2s;}
+.theme-btn:hover{color:var(--acc);border-color:var(--acc);box-shadow:var(--glow);}
+.menu-btn{display:none;background:var(--panel);border:1px solid var(--line);color:var(--soft);width:38px;height:38px;border-radius:9px;cursor:pointer;font-size:17px;}
+
+/* LAYOUT: left sidebar */
+.shell{display:flex;min-height:calc(100vh - 60px);}
+#sidebar{width:var(--sb-w);flex:0 0 var(--sb-w);background:var(--panel);border-right:1px solid var(--line);position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;}
+.sb-title{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);padding:6px 12px 12px;}
+.nav-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px 13px;border:1px solid transparent;background:none;border-radius:9px;cursor:pointer;color:var(--soft);font-family:"Inter",sans-serif;font-size:13.5px;font-weight:500;transition:.16s;text-align:left;margin-bottom:2px;}
+.nav-item:hover{color:var(--ink);background:var(--panel-2);}
+.nav-item.active{color:#06231f;background:linear-gradient(135deg,var(--acc),var(--acc-2));font-weight:700;box-shadow:var(--glow);}
+.nav-item .no{font-family:"JetBrains Mono",monospace;font-size:11px;opacity:.7;width:22px;flex:0 0 22px;}
+.nav-item.active .no{opacity:.85;}
+.nav-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sb-info{margin-top:auto;padding:14px 13px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;font-family:"JetBrains Mono",monospace;font-size:11px;line-height:1.7;color:var(--soft);}
+.sb-info .row{display:flex;flex-direction:column;gap:1px;margin-bottom:7px;}
+.sb-info .row:last-child{margin-bottom:0;}
+.sb-info .k{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.05em;}
+.sb-info .vv{color:var(--acc);font-weight:600;}
+
+.main{flex:1;min-width:0;max-width:1040px;padding:34px 42px 90px;}
+@media(max-width:900px){
+  .menu-btn{display:block;}
+  #sidebar{position:fixed;left:calc(-1 * var(--sb-w) - 8px);top:60px;z-index:50;transition:.28s cubic-bezier(.4,0,.2,1);box-shadow:var(--shadow);}
+  #sidebar.open{left:0;}
+  .main{padding:24px 16px 70px;}
+  .status{display:none;}
+}
+
+.page{display:none;}
+.page.active{display:block;animation:in .4s cubic-bezier(.2,.7,.2,1);}
+@keyframes in{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+
+.crumb{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);display:inline-flex;align-items:center;gap:8px;}
+.crumb::before{content:"//";opacity:.5;}
+.page h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(27px,4.2vw,40px);line-height:1.08;margin:12px 0 8px;letter-spacing:-.015em;}
+.page .sub{font-size:16px;color:var(--soft);max-width:66ch;margin:0 0 8px;}
+.objective{background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:0 10px 10px 0;padding:15px 19px;margin:20px 0;font-size:14.5px;}
+.objective b{color:var(--acc);}
+
+.sec-h{display:flex;align-items:center;gap:13px;margin:42px 0 6px;padding-bottom:11px;border-bottom:1px solid var(--line);}
+.sec-h .ico{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;font-size:16px;color:#06231f;flex:0 0 36px;font-weight:700;}
+.sec-h h2{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:21px;margin:0;letter-spacing:-.01em;}
+.sec-h .d{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--dim);margin-top:3px;}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-top:18px;box-shadow:var(--shadow);}
+.formula{background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:14px 18px;margin:16px 0;overflow-x:auto;}
+.note{font-size:13.6px;color:var(--soft);background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:13px 16px 13px 24px;margin-top:16px;position:relative;}
+.note::before{content:"›";position:absolute;left:6px;top:11px;color:var(--amber);font-weight:900;}
+.note b{color:var(--ink);}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-top:20px;}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:16px 17px;position:relative;overflow:hidden;transition:.2s;}
+.stat:hover{border-color:var(--c,var(--acc));box-shadow:0 0 0 1px var(--c,var(--acc)),0 0 22px -8px var(--c,var(--acc));}
+.stat::before{content:"";position:absolute;top:0;left:0;width:34px;height:3px;background:var(--c,var(--acc));}
+.stat .l{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);}
+.stat .v{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:27px;line-height:1.12;margin-top:7px;color:var(--ink);}
+.stat .s{font-size:12px;color:var(--soft);margin-top:3px;}
+
+.scards{display:grid;grid-template-columns:repeat(auto-fit,minmax(186px,1fr));gap:13px;margin-top:18px;}
+.scard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:17px;transition:.2s;position:relative;}
+.scard::after{content:"";position:absolute;top:11px;right:11px;width:5px;height:5px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc);}
+.scard:hover{border-color:var(--acc);transform:translateY(-3px);box-shadow:var(--glow);}
+.scard .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
+.scard .emoji{font-size:24px;}
+.scard .badge{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--acc);background:rgba(45,212,191,.1);padding:4px 9px;border-radius:6px;text-transform:uppercase;border:1px solid rgba(45,212,191,.25);}
+.scard h4{font-size:15px;font-weight:700;margin:0 0 6px;font-family:"Space Grotesk",sans-serif;}
+.scard .desc{font-size:12.5px;color:var(--soft);line-height:1.5;min-height:50px;}
+.scard .pol-l{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin:13px 0 6px;}
+.scard .pill{display:inline-block;font-size:12px;font-weight:700;color:#06231f;padding:6px 13px;border-radius:7px;background:linear-gradient(135deg,var(--acc),var(--acc-2));}
+.scard .q{font-family:"JetBrains Mono",monospace;font-size:18px;font-weight:600;margin-top:12px;}
+.scard .q b{color:var(--acc);}
+
+.tbl{overflow-x:auto;margin-top:16px;border:1px solid var(--line);border-radius:11px;}
+table{border-collapse:collapse;width:100%;font-size:13.4px;background:var(--panel);}
+th,td{padding:10px 14px;text-align:right;border-bottom:1px solid var(--line-2);white-space:nowrap;}
+th:first-child,td:first-child{text-align:left;}
+thead th{background:var(--panel-2);color:var(--acc);font-family:"JetBrains Mono",monospace;font-weight:600;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;position:sticky;top:0;border-bottom:1px solid var(--acc);}
+tbody tr{transition:.1s;}tbody tr:hover{background:var(--panel-2);}
+tfoot td{font-weight:700;background:var(--panel-2);border-top:1px solid var(--acc);color:var(--acc);}
+.mono{font-family:"JetBrains Mono",monospace;}.win{color:var(--lime);font-weight:600;}.bad{color:var(--mag);font-weight:600;}
+
+.chart-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0;margin-top:16px;box-shadow:var(--shadow);overflow:hidden;}
+.chart-card h4{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:15.5px;margin:0;padding:15px 20px 4px;}
+.chart-card .cap{font-size:12.2px;color:var(--soft);margin:0;padding:0 20px 14px;border-bottom:1px solid var(--line-2);}
+.cbox{position:relative;height:330px;padding:16px 20px;}.cbox.sm{height:288px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:760px){.grid2{grid-template-columns:1fr;}.stats{grid-template-columns:1fr 1fr;}}
+
+.ctrls{display:flex;flex-direction:column;gap:14px;}
+.ctrl label{display:flex;justify-content:space-between;font-size:13.5px;font-weight:600;margin-bottom:6px;}
+.ctrl label .v{font-family:"JetBrains Mono",monospace;color:var(--acc);}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:5px;background:var(--line);outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:3px;background:var(--acc);border:none;box-shadow:0 0 10px var(--acc);cursor:pointer;}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:3px;background:var(--acc);border:none;cursor:pointer;}
+.ctrl .h{font-size:11.5px;color:var(--dim);margin-top:4px;}
+.bigres{background:linear-gradient(150deg,var(--panel-2),var(--panel));border:1px solid var(--acc);border-radius:12px;padding:24px;display:flex;flex-direction:column;justify-content:center;box-shadow:var(--glow);position:relative;overflow:hidden;}
+.bigres::before{content:"";position:absolute;inset:0;background:radial-gradient(300px 160px at 90% 10%,rgba(45,212,191,.12),transparent 60%);}
+.bigres>*{position:relative;z-index:1;}
+.bigres .l{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);}
+.bigres .n{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(34px,5vw,48px);line-height:1;margin:9px 0;color:var(--ink);}
+.bigres .n small{font-size:.36em;color:var(--soft);font-weight:500;}
+.bigres .rows{margin-top:13px;border-top:1px solid var(--line);padding-top:13px;font-size:13px;}
+.bigres .rows div{display:flex;justify-content:space-between;padding:3px 0;}
+.bigres .rows b{font-family:"JetBrains Mono",monospace;color:var(--acc);}
+.rbtn{margin-top:13px;align-self:start;background:var(--bg2);border:1px solid var(--line);color:var(--soft);font-family:"JetBrains Mono",monospace;font-size:11px;padding:7px 14px;border-radius:7px;cursor:pointer;transition:.18s;}
+.rbtn:hover{color:var(--acc);border-color:var(--acc);}
+
+.qa{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:0 10px 10px 0;padding:14px 18px;margin-top:13px;}
+.qa .q{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:15.5px;}
+.qa .a{color:var(--soft);font-size:14px;margin-top:4px;}
+.pill-i{display:inline-block;background:rgba(45,212,191,.1);border:1px solid rgba(45,212,191,.25);border-radius:6px;padding:2px 9px;font-size:12px;font-family:"JetBrains Mono",monospace;color:var(--acc);}
+
+.tabs{display:flex;gap:0;margin-top:20px;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex-wrap:wrap;}
+.tab{flex:1;min-width:120px;padding:11px 16px;font-size:13.5px;font-weight:600;color:var(--soft);cursor:pointer;border:none;background:var(--panel);border-right:1px solid var(--line);transition:.16s;font-family:"Space Grotesk",sans-serif;}
+.tab:last-child{border-right:none;}.tab:hover{color:var(--ink);background:var(--panel-2);}
+.tab.active{color:#06231f;background:linear-gradient(135deg,var(--acc),var(--acc-2));}
+.tabpane{display:none;}.tabpane.active{display:block;animation:in .3s;}
+
+/* ===== HOMEPAGE (terminal) ===== */
+.term-banner{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);}
+.tb-bar{display:flex;align-items:center;gap:8px;padding:11px 16px;background:var(--bg2);border-bottom:1px solid var(--line);}
+.tb-dot{width:11px;height:11px;border-radius:50%;}
+.tb-dot.r{background:#FB7185;}.tb-dot.y{background:#FBBF24;}.tb-dot.g{background:#4ADE80;}
+.tb-path{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--dim);margin-left:8px;}
+.tb-body{padding:26px 30px 30px;position:relative;}
+.tb-body::after{content:"";position:absolute;right:-70px;top:-70px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(45,212,191,.14),transparent 70%);}
+.tb-body>*{position:relative;z-index:1;}
+.tb-line{font-family:"JetBrains Mono",monospace;font-size:13.5px;}
+.tb-line .prompt{color:var(--acc);}.tb-line .cmd{color:var(--violet);}
+.tb-out{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--lime);margin:6px 0 4px;}
+.tb-body h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(28px,5vw,46px);line-height:1.05;margin:16px 0 10px;letter-spacing:-.02em;}
+.tb-body h1 em{font-style:normal;color:var(--acc);}
+.tb-body p{font-size:16px;color:var(--soft);max-width:62ch;margin:0;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:20px;}
+.chip{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:6px 14px;font-size:12px;color:var(--soft);font-family:"JetBrains Mono",monospace;}
+.lvl-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-top:18px;}
+.lvl{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:16px;border-top:3px solid var(--c,var(--acc));transition:.2s;}
+.lvl:hover{transform:translateY(-3px);border-color:var(--c,var(--acc));box-shadow:0 0 22px -10px var(--c,var(--acc));}
+.lvl .t{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:14px;letter-spacing:.03em;text-transform:uppercase;color:var(--c);}
+.lvl .n{font-size:13px;color:var(--soft);margin-top:5px;}
+.lvl .b{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--dim);margin-top:9px;}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:11px;margin-top:16px;}
+.bcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;cursor:pointer;transition:.18s;display:flex;gap:13px;align-items:center;}
+.bcard:hover{border-color:var(--acc);transform:translateX(3px);box-shadow:var(--glow);}
+.bcard:hover .arr{color:var(--acc);transform:translateX(3px);}
+.bcard .dirno{font-family:"JetBrains Mono",monospace;font-size:14px;color:var(--acc);font-weight:600;flex:0 0 auto;}
+.bcard h4{font-size:14px;font-weight:600;margin:0 0 2px;line-height:1.2;font-family:"Space Grotesk",sans-serif;}
+.bcard .sk{font-size:11.5px;color:var(--dim);font-family:"JetBrains Mono",monospace;}
+.bcard>div{flex:1;min-width:0;}
+.bcard .arr{color:var(--dim);font-size:16px;transition:.18s;flex:0 0 auto;}
+.rubric{display:none;}
+.summary-lead{display:none;}
+@media(max-width:760px){.lvl-grid{grid-template-columns:1fr 1fr;}.tb-body{padding:24px 20px;}}
+
+.footnote{margin-top:44px;border-top:1px solid var(--line);padding-top:18px;font-size:12.5px;color:var(--dim);}
+.footnote code{background:var(--bg2);padding:2px 6px;border-radius:5px;font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--acc);}
+
+/* ===== MATH MODEL BLOCK ===== */
+.model{background:linear-gradient(160deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-left:3px solid var(--acc-2);border-radius:0 12px 12px 0;padding:18px 22px;margin:18px 0;}
+.model .mlabel{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc-2);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.model .mlabel::before{content:"∑";font-size:15px;}
+.model .eq{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin:10px 0;overflow-x:auto;}
+.model .vars{font-size:13px;color:var(--soft);margin-top:10px;line-height:1.85;}
+.model .vars code{background:var(--bg2);padding:1px 7px;border-radius:5px;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--acc);}
+.constraints{list-style:none;padding:0;margin:12px 0 0;counter-reset:c;}
+.constraints li{position:relative;padding:9px 14px 9px 46px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:var(--bg2);font-size:13.5px;}
+.constraints li::before{counter-increment:c;content:"C"counter(c);position:absolute;left:11px;top:9px;font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;color:#06231f;background:var(--acc-2);padding:2px 6px;border-radius:5px;}
+.constraints li .cx{font-family:"JetBrains Mono",monospace;color:var(--acc);font-size:12.5px;}
+.constraints li .cn{color:var(--dim);font-size:12px;margin-left:6px;}
+
+/* ===== CODE BLOCK (collapsible) ===== */
+.codewrap{margin:16px 0;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--bg2);}
+.codehead{display:flex;align-items:center;gap:10px;padding:11px 16px;background:var(--panel-2);border-bottom:1px solid var(--line);cursor:pointer;user-select:none;transition:.15s;}
+.codehead:hover{background:var(--panel);}
+.codehead .py{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--lime);text-transform:uppercase;display:flex;align-items:center;gap:7px;}
+.codehead .py::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--lime);box-shadow:0 0 7px var(--lime);}
+.codehead .ttl{flex:1;font-size:13px;color:var(--soft);font-weight:500;}
+.codehead .tog{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--dim);display:flex;align-items:center;gap:6px;}
+.codehead .chev{transition:transform .2s;display:inline-block;}
+.codewrap.open .chev{transform:rotate(90deg);}
+.codebody{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+.codewrap.open .codebody{max-height:1400px;overflow:auto;}
+.codebody pre{margin:0;padding:16px 18px;font-family:"JetBrains Mono",monospace;font-size:12.4px;line-height:1.62;color:var(--ink);white-space:pre;}
+.codebody .cm{color:var(--dim);font-style:italic;}
+.codebody .kw{color:var(--violet);}
+.codebody .fn{color:var(--acc-2);}
+.codebody .st{color:var(--lime);}
+.codebody .nm{color:var(--amber);}
+
+/* ===== CHECK / VERIFY callout ===== */
+.check{display:flex;gap:11px;align-items:flex-start;background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.3);border-radius:10px;padding:12px 16px;margin-top:14px;font-size:13.4px;}
+.check .ic{flex:0 0 auto;width:22px;height:22px;border-radius:6px;background:var(--lime);color:#062b14;display:grid;place-items:center;font-weight:900;font-size:13px;}
+.check.warn{background:rgba(251,191,36,.07);border-color:rgba(251,191,36,.35);}
+.check.warn .ic{background:var(--amber);color:#3a2800;}
+.check b{color:var(--ink);}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:11px;margin-top:14px;}
+.dl{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0;}
+.dl a{display:inline-flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:12.5px;font-family:"JetBrains Mono",monospace;color:var(--soft);transition:.15s;cursor:pointer;}
+.dl a:hover{color:var(--acc);border-color:var(--acc);box-shadow:var(--glow);}
+</style>
+</head>
+<body data-theme="dark">
+<div id="cdnWarn" style="display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:200;background:#FB7185;color:#1a0508;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:90vw;">⚠ Không tải được thư viện biểu đồ/công thức (cần Internet). Nội dung &amp; số liệu vẫn hiển thị.</div>
+<header class="hbar"><div class="hbar-in">
+<button class="menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+<span class="brand"><span class="sq">A</span>AIDEOM<b>·</b>VN <span style="font-weight:400;color:var(--dim);font-size:13px;margin-left:4px">terminal</span></span>
+<span class="sp"></span>
+<span class="status"><span class="dot"></span>SYSTEM ONLINE · 12 MODULES</span>
+<button class="theme-btn" id="themeBtn" title="Sáng/Tối">☀</button>
+</div></header>
+<div class="shell">
+<aside id="sidebar">
+<div class="sb-title">// Mục lục</div>
+<button class="nav-item" data-page="home"><span class="no">◆</span><span class="nm">Trang chủ</span></button><button class="nav-item" data-page="bai1"><span class="no">01</span><span class="nm">Cobb-Douglas</span></button><button class="nav-item" data-page="bai2"><span class="no">02</span><span class="nm">Ngân sách</span></button><button class="nav-item" data-page="bai3"><span class="no">03</span><span class="nm">Ưu tiên ngành</span></button><button class="nav-item" data-page="bai4"><span class="no">04</span><span class="nm">LP vùng miền</span></button><button class="nav-item" data-page="bai5"><span class="no">05</span><span class="nm">MIP dự án</span></button><button class="nav-item" data-page="bai6"><span class="no">06</span><span class="nm">TOPSIS</span></button><button class="nav-item" data-page="bai7"><span class="no">07</span><span class="nm">NSGA-II</span></button><button class="nav-item" data-page="bai8"><span class="no">08</span><span class="nm">Tối ưu động</span></button><button class="nav-item" data-page="bai9"><span class="no">09</span><span class="nm">Lao động AI</span></button><button class="nav-item" data-page="bai10"><span class="no">10</span><span class="nm">Ngẫu nhiên</span></button><button class="nav-item" data-page="bai11"><span class="no">11</span><span class="nm">Q-learning</span></button><button class="nav-item" data-page="bai12"><span class="no">12</span><span class="nm">Tích hợp</span></button>
+<div class="sb-info">
+<div class="row"><span class="k">Họ và tên</span><span class="vv">Nguyễn Bảo Khánh</span></div>
+<div class="row"><span class="k">Mã sinh viên</span><span class="vv">23051266</span></div>
+<div class="row"><span class="k">Bộ môn</span><span class="vv">Các mô hình ra quyết định</span></div>
+</div>
+</aside>
+<main class="main"><div class="page" id="page-home"></div><div class="page" id="page-bai1"></div><div class="page" id="page-bai2"></div><div class="page" id="page-bai3"></div><div class="page" id="page-bai4"></div><div class="page" id="page-bai5"></div><div class="page" id="page-bai6"></div><div class="page" id="page-bai7"></div><div class="page" id="page-bai8"></div><div class="page" id="page-bai9"></div><div class="page" id="page-bai10"></div><div class="page" id="page-bai11"></div><div class="page" id="page-bai12"></div></main>
+</div>
+<script>
+
+const R = {"bai1": {"A": [27.7466, 28.7638, 30.3501, 30.9751, 32.9171, 34.9136], "Agrowth": 4.7, "Amean": 30.9444, "Yhat": [8971.5, 9130.9, 9699.6, 10211.7, 10822.0, 11387.0], "MAPE": 6.42, "gY": 9.36, "decomp": [["TFP", 49.08], ["Vốn K", 31.78], ["Lao động L", -0.34], ["Số hóa D", 10.37], ["AI", 6.24], ["Nhân lực H", 2.87]], "Y2030": 14502.7, "cagr2530": 2.45}, "bai2": {"x": [25.0, 15.0, 20.0, 40.0], "Z": 112.25, "AI_RD_pct": 55, "sens_B": [100, 120, 140, 160, 180, 200], "sens_Z": [112.25, 139.25, 166.25, 193.25, 220.25, 247.25], "x3_30": [25.0, 15.0, 30.0, 30.0], "x3_30_Z": 108.25, "shadow_budget": 1.35}, "bai3": {"ranking": [["CN chế biến chế tạo", 0.6121], ["CNTT-Truyền thông", 0.5839], ["Tài chính-Ngân hàng", 0.5618], ["Logistics-Vận tải", 0.3203], ["Bán buôn-bán lẻ", 0.2803], ["Khai khoáng", 0.1953], ["Y tế", 0.1831], ["Giáo dục-Đào tạo", 0.1721], ["Xây dựng", 0.0918], ["Nông-Lâm-Thủy sản", 0.0473]], "growth_top3": ["CN chế biến chế tạo", "CNTT-Truyền thông", "Tài chính-Ngân hàng"], "inclusive_top3": ["CN chế biến chế tạo", "Tài chính-Ngân hàng", "CNTT-Truyền thông"]}, "bai3_norm": [["Nông-Lâm-Th", 0.4, 0.0, 0.08, 0.14, 1.0, 0.0, 1.0], ["CN chế biến", 0.97, 0.12, 0.77, 1.0, 0.87, 0.55, 0.35], ["Xây dựng", 0.78, 0.06, 0.19, 0.01, 0.35, 0.07, 0.81], ["Khai khoáng", 0.0, 1.0, 0.0, 0.03, 0.0, 0.21, 0.0], ["Bán buôn-bá", 0.75, 0.04, 0.4, 0.02, 0.58, 0.45, 0.46], ["Tài chính-N", 0.77, 0.82, 0.89, 0.0, 0.02, 0.78, 0.08], ["Logistics-V", 1.0, 0.18, 0.68, 0.01, 0.13, 0.37, 0.54], ["CNTT-Truyền", 0.81, 0.51, 1.0, 0.61, 0.02, 1.0, 0.73], ["Giáo dục-Đà", 0.68, 0.09, 0.56, 0.0, 0.14, 0.32, 0.89], ["Y tế", 0.72, 0.28, 0.48, 0.0, 0.03, 0.41, 1.0]], "bai3_sens": [[0.05, ["CN", "Tài", "CNTT"]], [0.15, ["CN", "CNTT", "Tài"]], [0.25, ["CNTT", "CN", "Tài"]], [0.35, ["CNTT", "Tài", "CN"]], [0.4, ["CNTT", "Tài", "CN"]]], "bai4": {"Z_eq": 57212, "Z_noeq": 68750, "cost_equity": 11538, "region_names": ["Trung du miền núi", "ĐB sông Hồng", "Bắc Trung Bộ", "Tây Nguyên", "Đông Nam Bộ", "ĐB sông Cửu Long"], "matrix": [[0, 7650, 0, 3300], [0, 0, 5050, 0], [0, 0, 0, 5000], [0, 10650, 0, 1350], [0, 0, 12000, 0], [0, 2650, 0, 2350]], "region_totals": [10950, 5050, 5000, 12000, 12000, 5000], "col_totals": [0, 20950, 17050, 12000], "lam": 0.65, "lam_max": 0.683, "status07": "Infeasible", "status_eq": "Optimal"}, "bai5": {"selected": [2, 5, 7, 8, 9, 10, 12, 14, 15], "cost": 59700, "Z": 115400, "bc": 1.93, "detail": [[2, "TT dữ liệu phía Nam", 11500, 20800, 1.81], [5, "Cổng DVC v3", 3200, 6800, 2.12], [7, "Giáo dục số K-12", 6500, 12200, 1.88], [8, "TT AI + supercomputing", 15000, 28500, 1.9], [9, "Fintech sandbox", 2500, 5800, 2.32], [10, "Logistics thông minh", 7200, 13800, 1.92], [12, "Đào tạo 50K kỹ sư AI", 8500, 16200, 1.91], [14, "An ninh mạng SOC", 3800, 7500, 1.97], [15, "Open Data", 1500, 3800, 2.53]], "force_Z": 114578, "force_drop": 822, "force_sel": [1, 5, 6, 7, 8, 9, 10, 12, 15], "exp_EZ": 90715, "exp_sel": [2, 3, 5, 6, 7, 12, 14, 15], "exp_dropped": [8, 9, 10]}, "bai5_b100": {"z80": 115400, "z100": 115400, "new": [], "note": "Tập dự án giữ nguyên: ngân sách 80k chưa phải ràng buộc chặt (chỉ dùng 59700 tỷ). Ràng buộc thực sự chặt là số dự án ≤11 và ngân sách năm 1-2 ≤40k."}, "bai6": {"region_names": ["Trung du miền núi phía Bắc", "Đồng bằng sông Hồng", "Bắc Trung Bộ + DH Trung Bộ", "Tây Nguyên", "Đông Nam Bộ", "Đồng bằng sông Cửu Long"], "expert": [0.0993, 0.8981, 0.3597, 0.0312, 0.9402, 0.171], "entropy": [0.1248, 0.969, 0.3619, 0.0116, 0.9203, 0.0897], "entropy_weights": [0.0787, 0.4151, 0.0597, 0.139, 0.0628, 0.2361, 0.0073, 0.0012], "criteria": ["GRDP/N", "FDI", "Digital", "AI", "LĐĐT", "R&D", "Internet", "Gini"], "rank_expert": [5, 2, 3, 6, 1, 4], "rank_entropy": [4, 1, 3, 6, 2, 5]}, "bai6_sens": [[0.1, ["ĐNB", "ĐBSH", "BTB"]], [0.2, ["ĐNB", "ĐBSH", "BTB"]], [0.3, ["ĐNB", "ĐBSH", "BTB"]], [0.4, ["ĐNB", "ĐBSH", "BTB"]]], "bai7": {"n_pareto": 100, "f1_range": [41507, 63195], "f2_range": [34.7, 1817.8], "f3_range": [102, 6652], "f4_range": [-12291, -3999], "compromise": {"f1": 52237, "f2": 284.7, "f3": 444, "f4": -10385, "C": 0.8465}, "maxgrowth": {"f1": 63195, "f2": 1260.9, "f3": 5001, "f4": -5526}}, "bai7_pts": [[61336.5, 146.1, 6651.9], [55046.8, 1817.8, 136.2], [54942.0, 34.7, 4079.4], [57979.1, 1626.8, 281.7], [63195.3, 1260.9, 5000.6], [41506.9, 206.0, 324.8], [50720.5, 876.7, 102.4], [61228.4, 134.7, 6388.6], [62238.7, 207.7, 5782.3], [44826.6, 165.2, 829.1], [59898.8, 686.9, 2705.3], [47142.6, 143.2, 945.1], [61697.5, 567.3, 4516.9], [55980.2, 76.3, 4299.2], [62732.4, 921.1, 5133.5], [62615.5, 1344.5, 4894.2], [43263.9, 95.7, 707.8], [62779.9, 971.6, 5349.1], [60649.2, 450.9, 2277.0], [60744.1, 598.5, 3209.9], [58616.1, 530.1, 2007.8], [53055.2, 352.1, 939.5], [49025.3, 225.5, 670.4], [42629.1, 86.8, 791.5], [56954.0, 345.6, 1168.2], [60668.6, 1000.3, 3050.6], [58537.6, 1476.2, 359.9], [44075.7, 136.4, 629.3], [61234.5, 299.4, 5608.8], [50362.6, 388.9, 235.4], [60423.6, 1632.3, 2099.8], [55503.6, 110.7, 4113.8], [51662.3, 786.2, 165.2], [61224.3, 752.3, 3573.5], [61148.5, 130.7, 6524.5], [62514.6, 1160.6, 5299.1], [60067.7, 333.8, 3249.5], [47311.9, 176.4, 945.1], [59384.4, 1736.0, 657.6], [58604.8, 203.7, 2568.7], [61801.4, 852.5, 4512.0], [54276.8, 427.4, 209.8], [61618.0, 1247.9, 3515.0], [58025.4, 1529.8, 219.3], [60986.2, 1174.4, 2961.0], [61548.4, 467.1, 3773.7], [59903.7, 423.6, 2871.4], [60647.7, 885.2, 2174.3], [56556.0, 1116.6, 143.5], [59567.2, 1522.5, 910.4], [61793.0, 833.0, 4232.0], [47694.8, 188.3, 516.2], [54455.4, 643.1, 412.4], [57086.2, 243.8, 1814.8], [60264.3, 443.9, 2761.3], [59210.2, 281.6, 1525.7], [48941.1, 202.6, 914.1], [41602.8, 210.2, 383.5], [60430.4, 382.3, 3977.8], [62094.6, 594.2, 5503.4], [55079.2, 1811.8, 158.5], [59989.9, 794.1, 1238.2], [42150.4, 174.2, 506.0], [57218.9, 1417.3, 253.2], [57362.9, 1421.6, 294.8], [62225.4, 1093.6, 4942.7], [57714.4, 1216.9, 220.1], [58577.9, 118.4, 1613.2], [61266.6, 812.3, 3624.3], [62881.4, 1208.7, 5202.3], [55669.4, 1383.6, 129.4], [59395.3, 1737.4, 663.8], [52236.5, 284.7, 444.3], [58152.1, 400.3, 1406.3], [57569.6, 337.6, 1249.7], [47801.4, 857.9, 106.4], [54643.5, 69.3, 4069.6], [61958.9, 398.6, 5503.1], [58996.0, 934.5, 432.9], [62993.6, 1304.9, 5051.3], [60288.6, 1349.6, 2093.4], [52661.4, 372.4, 481.9], [48456.1, 288.7, 392.5], [51230.2, 922.5, 127.6], [58589.2, 497.4, 1480.1], [51296.7, 1299.7, 124.8], [54328.1, 267.6, 1327.6], [61516.4, 1028.1, 3349.5], [58924.0, 1172.9, 330.4], [44612.0, 171.1, 848.2], [61357.3, 1009.1, 3343.6], [55425.9, 69.8, 4220.6], [57386.4, 254.1, 1814.8], [60538.2, 401.7, 3917.5], [57611.2, 1118.5, 307.8], [55653.4, 41.3, 4233.0], [61308.4, 1064.9, 3243.8], [58498.3, 492.4, 1249.7], [57860.8, 950.0, 210.1], [62365.7, 1263.0, 5005.1]], "bai7_para": {"parallel": [[0.914, 0.062, 1.0, 1.0], [0.624, 1.0, 0.005, 0.088], [0.619, 0.0, 0.607, 0.584], [0.759, 0.893, 0.027, 0.0], [1.0, 0.688, 0.748, 0.816], [0.0, 0.096, 0.034, 0.599], [0.425, 0.472, 0.0, 0.199], [0.909, 0.056, 0.96, 0.965], [0.956, 0.097, 0.867, 0.939], [0.153, 0.073, 0.111, 0.6], [0.848, 0.366, 0.397, 0.352], [0.26, 0.061, 0.129, 0.472], [0.931, 0.299, 0.674, 0.671], [0.667, 0.023, 0.641, 0.731], [0.979, 0.497, 0.768, 0.912], [0.973, 0.735, 0.732, 0.802], [0.081, 0.034, 0.092, 0.631], [0.981, 0.525, 0.801, 0.871], [0.883, 0.233, 0.332, 0.422], [0.887, 0.316, 0.474, 0.549], [0.789, 0.278, 0.291, 0.188], [0.532, 0.178, 0.128, 0.236], [0.347, 0.107, 0.087, 0.376], [0.052, 0.029, 0.105, 0.652], [0.712, 0.174, 0.163, 0.332], [0.884, 0.542, 0.45, 0.51], [0.785, 0.808, 0.039, 0.028], [0.118, 0.057, 0.08, 0.592], [0.91, 0.148, 0.841, 0.941], [0.408, 0.199, 0.02, 0.207], [0.872, 0.896, 0.305, 0.369], [0.645, 0.043, 0.612, 0.705], [0.468, 0.421, 0.01, 0.178], [0.909, 0.402, 0.53, 0.651], [0.906, 0.054, 0.981, 1.0], [0.969, 0.631, 0.793, 0.858], [0.856, 0.168, 0.481, 0.527], [0.268, 0.079, 0.129, 0.472], [0.824, 0.954, 0.085, 0.218], [0.788, 0.095, 0.377, 0.457], [0.936, 0.459, 0.673, 0.784], [0.589, 0.22, 0.016, 0.202], [0.927, 0.68, 0.521, 0.491], [0.762, 0.838, 0.018, 0.088], [0.898, 0.639, 0.436, 0.576], [0.924, 0.242, 0.561, 0.635], [0.848, 0.218, 0.423, 0.438], [0.883, 0.477, 0.316, 0.458], [0.694, 0.607, 0.006, 0.182], [0.833, 0.834, 0.123, 0.146]], "comp_para": [0.495, 0.14, 0.052, 0.23]}, "bai8": {"years": [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035], "W": 79.02, "K": [27500, 30020, 31407, 32482, 33397, 34135, 33763, 32075, 30471, 28947], "D": [20.3, 17.9, 17.9, 18.3, 18.7, 19.0, 20.7, 24.4, 26.2, 23.1], "AI": [86.0, 86.5, 88.7, 90.1, 90.9, 91.1, 97.4, 111.1, 119.0, 101.2], "H": [30.0, 29.4, 28.8, 28.2, 27.7, 27.1, 26.6, 26.0, 26.0, 28.1], "Y": [11796, 12018, 12250, 12459, 12633, 12772, 12932, 13096, 13097, 12665], "C": [7156, 7511, 7860, 8208, 8557, 8910, 9156, 9181, 8926, 8656], "invrate": [39.3, 37.5, 35.8, 34.1, 32.3, 30.2, 29.2, 29.9, 31.9, 31.7], "opt_Y2035": 12665, "even_Y2035": 12158, "W_even": 78.67, "W90": 58.8, "invrate90": [22.6, 23.9, 25.6, 27.7, 30.0, 32.5, 35.3, 38.3, 42.0, 42.0], "frontloaded": true, "shareK": [33.0, 24.0, 21.6, 20.4, 19.1, 10.5, 0.0, 0.0, 0.0, 0.0], "shareD": [0.0, 6.4, 7.6, 7.4, 7.1, 11.1, 17.0, 13.0, 0.0, 0.0], "shareAI": [6.3, 7.0, 6.7, 6.4, 6.1, 8.7, 12.2, 10.4, 0.0, 0.0], "shareH": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 6.5, 31.9, 31.7]}, "bai8_shock": {"years": [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035], "base": [11796, 12018, 12250, 12459, 12633, 12772, 12932, 13096, 13097, 12665], "shock": [11796, 12018, 11270, 12404, 12581, 12722, 12884, 13050, 13053, 12622]}, "bai9_full": {"sectors": ["Nông-Lâm-Thủy sản", "CN chế biến chế tạo", "Xây dựng", "Bán buôn-bán lẻ", "Tài chính-Ngân hàng", "Logistics-Vận tải", "CNTT-Truyền thông", "Giáo dục-Đào tạo"], "rows": [["Nông-Lâm-Thủy sản", 0, 4651, 209302], ["CN chế biến chế tạo", 0, 4052, 113460], ["Xây dựng", 0, 1691, 59197], ["Bán buôn-bán lẻ", 0, 2748, 87949], ["Tài chính-Ngân hàng", 0, 194, 4264], ["Logistics-Vận tải", 0, 687, 20613], ["CNTT-Truyền thông", 158, 60, 9660], ["Giáo dục-Đào tạo", 0, 15758, 866667]], "total_net": 1371112}, "bai9_thresh": {"coef": -6.29, "ratio_min": 0.0, "net_per_AI_only": 6.29, "threshold_zero": true}, "bai9_cap5": {"total_net": 1650000}, "bai10": {"Zsp": 98575, "Zev": 98575, "Zws": 98575, "VSS": 0, "EVPI": 0, "x_sp": {"I": 0, "D": 0, "AI": 65000, "H": 0}, "detZ": {"s1": 101500, "s2": 97750, "s3": 96250, "s4": 97750}, "ps": {"s1": 0.3, "s2": 0.45, "s3": 0.2, "s4": 0.05}}, "bai10_extra": {"worst_case": 96250, "note": "Trong mô hình tuyến tính đơn giản hóa, lời giải EV và SP cho cùng cơ cấu first-stage; recourse phi tuyến/penalty sẽ làm VSS>0."}, "bai11": {"policies": [{"desc": "VN 2026 thực tế", "state": "GDP TB, Số hóa TB, AI thấp, Thất nghiệp TB", "action": "Bao trùm", "Q": 14.505, "badge": "Thực tế", "emoji": "🚩"}, {"desc": "Kịch bản tệ", "state": "GDP thấp, Số hóa thấp, AI thấp, Thất nghiệp cao", "action": "Bao trùm", "Q": 14.475, "badge": "KB 1", "emoji": "📉"}, {"desc": "Kịch bản tốt", "state": "GDP cao, Số hóa cao, AI cao, Thất nghiệp thấp", "action": "AI dẫn dắt", "Q": 16.333, "badge": "KB 2", "emoji": "📈"}, {"desc": "Sau khủng hoảng", "state": "GDP thấp, Số hóa TB, AI thấp, Thất nghiệp cao", "action": "AI dẫn dắt", "Q": 13.976, "badge": "KB 3", "emoji": "🔄"}, {"desc": "AI mạnh, D yếu", "state": "GDP TB, Số hóa thấp, AI cao, Thất nghiệp TB", "action": "Số hóa nhanh", "Q": 15.654, "badge": "KB 4", "emoji": "🤖"}], "compare": {"π* (Q-learning)": [6.85, 1.17], "Luôn Cân bằng": [2.64, 0.26], "Luôn AI dẫn dắt": [6.04, 2.32], "Random": [3.37, 0.76]}, "curve": [1.684, 4.497, 5.458, 6.626, 6.494, 5.557, 5.691, 4.446, 6.671, 6.504, 7.081, 4.223, 6.715, 6.674, 3.787, 7.112, 5.116, 6.715, 6.65, 5.082, 6.582, 6.156, 6.603, 5.055, 7.148, 6.461, 5.683, 7.067, 5.683, 7.19, 6.681, 4.709, 5.909, 7.19, 6.112, 6.636, 6.251, 6.645, 6.178, 5.085, 4.63, 6.018, 5.461, 6.063, 6.732, 6.482, 4.384, 7.245, 5.484, 6.281]}, "bai7_opp": {"growth_gain_pct": 21.0, "equity_worse_pct": 342.9, "emis_worse_pct": 1026.4}, "bai9_flows": {"sankey": [{"sector": "Nông-Lâm-Thủy sản", "new": 0, "up": 209302, "disp": 0, "net": 209302}, {"sector": "Xây dựng", "new": 0, "up": 59197, "disp": 0, "net": 59197}, {"sector": "Bán buôn-bán lẻ", "new": 0, "up": 87949, "disp": 0, "net": 87949}], "new": [0, 0, 0, 0, 0, 0, 9900, 0], "up": [209302, 113460, 59197, 87949, 4264, 20613, 1201, 866667], "disp": [0, 0, 0, 0, 0, 0, 1441, 0]}, "bai9_5pct": {"status": "Optimal", "total": 1365935, "feasible": true, "binds": true}};
+const CODE = {"bai1": "import numpy as np, pandas as pd\n\n# --- Dữ liệu vĩ mô VN 2020-2025 (vietnam_macro_2020_2025.csv) ---\nyear = np.array([2020,2021,2022,2023,2024,2025])\nK  = np.array([16500,17800,19600,21300,23500,25900.])  # vốn tích lũy (ngh.tỷ)\nL  = np.array([53.6,50.5,51.7,52.4,52.9,53.4])          # lao động (triệu)\nD  = np.array([12.0,12.7,14.3,16.5,18.3,19.5])          # KTS/GDP (%)\nAI = np.array([55.6,60.2,65.4,67.0,73.8,80.1])          # nghìn DN số\nH  = np.array([24.1,26.1,26.2,27.0,28.4,29.2])          # LĐ qua đào tạo (%)\nY  = np.array([8044.4,8487.5,9513.3,10221.8,11511.9,12847.6])\na,b,g,d,t = 0.33,0.42,0.10,0.08,0.07   # α,β,γ,δ,θ (Σ=1)\n\n# Câu 1.4.1 — giải ngược TFP: A_t = Y / (K^α L^β D^γ AI^δ H^θ)\nA = Y / (K**a * L**b * D**g * AI**d * H**t)\n\n# Câu 1.4.2 — dự báo với TFP cố định = trung bình, đo MAPE\nYhat = A.mean() * (K**a * L**b * D**g * AI**d * H**t)\nMAPE = np.mean(np.abs((Y - Yhat) / Y)) * 100        # = 6.42 %\n\n# Câu 1.4.3 — phân rã tăng trưởng (growth accounting) bằng log-diff\ndln = lambda x: np.diff(np.log(x))\ncontrib = {'TFP':dln(A).mean(), 'K':a*dln(K).mean(), 'L':b*dln(L).mean(),\n           'D':g*dln(D).mean(), 'AI':d*dln(AI).mean(), 'H':t*dln(H).mean()}\ngY = dln(Y).mean()\nfor k,v in contrib.items():\n    print(f'{k:4s}: {v/sum(contrib.values())*100:5.1f}% đóng góp')\n\n# Câu 1.4.4 — kịch bản 2030: D=30, AI=100, H=35, gK=6%/n, gTFP=1.2%/n\nK30=25900*1.06**5; L30=53.4*1.006**5; A30=A.mean()*1.012**5\nY2030 = A30 * (K30**a * L30**b * 30.**g * 100.**d * 35.**t)\nprint('GDP 2030 =', round(Y2030), 'ngh.tỷ VND')", "bai2": "from scipy.optimize import linprog\nimport pulp\n\n# max Z = 0.85x1 + 1.20x2 + 0.95x3 + 1.35x4  (đổi dấu để minimize)\nc = [-0.85, -1.20, -0.95, -1.35]\nA_ub = [[ 1, 1, 1, 1],         # x1+x2+x3+x4 <= 100\n        [-1, 0, 0, 0],         # x1 >= 25\n        [ 0,-1, 0, 0],         # x2 >= 15\n        [ 0, 0,-1, 0],         # x3 >= 20\n        [ 0, 0, 0,-1],         # x4 >= 10\n        [0.35,-0.65,0.35,-0.65]]# x2+x4 >= 0.35*(Σx)\nb_ub = [100, -25, -15, -20, -10, 0]\nres = linprog(c, A_ub=A_ub, b_ub=b_ub, bounds=[(0,None)]*4, method='highs')\nprint('x* =', res.x.round(1), ' Z* =', round(-res.fun,2))   # [25,15,20,40] Z*=112.25\n\n# Giá đối ngẫu (shadow price) bằng PuLP để diễn giải chính sách\nm = pulp.LpProblem('budget', pulp.LpMaximize)\nx = [pulp.LpVariable(f'x{i}', lowBound=0) for i in range(4)]\nm += 0.85*x[0]+1.20*x[1]+0.95*x[2]+1.35*x[3]\ncB = m.addConstraint(pulp.lpSum(x) <= 100, 'budget')\nm += x[0]>=25; m += x[1]>=15; m += x[2]>=20; m += x[3]>=10\nm += x[1]+x[3] >= 0.35*pulp.lpSum(x)\nm.solve(pulp.PULP_CBC_CMD(msg=False))\nprint('shadow price ngân sách =', m.constraints['budget'].pi)  # 1.35", "bai3": "import numpy as np, pandas as pd\ndf = pd.read_csv('vietnam_sectors_2024.csv')\n\ngood = ['growth','productivity','spillover','export','employment','ai_readiness']\nbad  = 'automation_risk'\nnz = lambda x: (x-x.min())/(x.max()-x.min())          # tiêu chí lợi ích\nng = lambda x: (x.max()-x)/(x.max()-x.min())          # tiêu chí \"xấu\" -> đảo dấu\n\nXg = df[good].apply(nz)            # chuẩn hóa min-max 6 cột tốt\nXb = ng(df[bad])                   # Risk đảo dấu\nw  = np.array([0.15,0.15,0.20,0.15,0.10,0.20]); w_risk = 0.15\n\ndf['Priority'] = Xg.values @ w - w_risk * Xb.values\nprint(df.sort_values('Priority', ascending=False)[['sector','Priority']])\n# Top-3: CN chế biến chế tạo, CNTT-TT, Tài chính-Ngân hàng", "bai4": "import pulp, numpy as np\nregions=['NMM','RRD','NCC','CH','SE','MD']; items=['I','D','AI','H']\nbeta={('NMM','I'):1.15,('NMM','D'):0.85,('NMM','AI'):0.55,('NMM','H'):1.30,\n      ('RRD','I'):0.95,('RRD','D'):1.25,('RRD','AI'):1.40,('RRD','H'):1.05,\n      ('NCC','I'):1.05,('NCC','D'):0.95,('NCC','AI'):0.85,('NCC','H'):1.15,\n      ('CH','I'):1.20,('CH','D'):0.75,('CH','AI'):0.45,('CH','H'):1.35,\n      ('SE','I'):0.90,('SE','D'):1.30,('SE','AI'):1.55,('SE','H'):1.00,\n      ('MD','I'):1.10,('MD','D'):0.85,('MD','AI'):0.65,('MD','H'):1.25}\nD0={'NMM':38,'RRD':78,'NCC':55,'CH':32,'SE':82,'MD':48}; gam=0.002\n\ndef solve(equity=True, lam=0.65):\n    m=pulp.LpProblem('digital_budget', pulp.LpMaximize)\n    x=pulp.LpVariable.dicts('x',(regions,items),lowBound=0)\n    m += pulp.lpSum(beta[r,j]*x[r][j] for r in regions for j in items)\n    m += pulp.lpSum(x[r][j] for r in regions for j in items) <= 50000   # C1\n    for r in regions:\n        m += pulp.lpSum(x[r][j] for j in items) >= 5000                 # C2 sàn\n        m += pulp.lpSum(x[r][j] for j in items) <= 12000                # C3 trần\n    m += pulp.lpSum(x[r]['H'] for r in regions) >= 12000                # C4\n    if equity:                                                          # C5 công bằng\n        M=pulp.LpVariable('Dmax', lowBound=0)\n        for r in regions: m += D0[r]+gam*x[r]['D'] <= M\n        for r in regions: m += D0[r]+gam*x[r]['D'] >= lam*M\n    m.solve(pulp.PULP_CBC_CMD(msg=False))\n    return pulp.LpStatus[m.status], pulp.value(m.objective)\n\n# λ=0.70 (đề bài) -> INFEASIBLE vì Tây Nguyên (D0=32) tối đa chỉ đạt 56 < 0.7*82=57.4\nprint(solve(lam=0.70))        # ('Infeasible', None)\nprint(solve(lam=0.65))        # ('Optimal', 57212)  -> λ khả thi\nprint('Chi phí công bằng =', solve(equity=False)[1] - solve(lam=0.65)[1])  # ~11538", "bai5": "from pulp import *\nP=range(1,16)\nC ={1:12000,2:11500,3:18000,4:4500,5:3200,6:5800,7:6500,8:15000,\n    9:2500,10:7200,11:4800,12:8500,13:20000,14:3800,15:1500}      # chi phí\nC12={1:8500,2:7500,3:12000,4:3500,5:2500,6:4000,7:4500,8:9000,\n    9:1800,10:5000,11:3500,12:5500,13:13000,14:2800,15:1200}      # năm 1-2\nB ={1:21500,2:20800,3:32500,4:9200,5:6800,6:11400,7:12200,8:28500,\n    9:5800,10:13800,11:8500,12:16200,13:35000,14:7500,15:3800}    # lợi ích NPV\n\nm=LpProblem('project_selection', LpMaximize)\ny=LpVariable.dicts('y', P, cat='Binary')\nm += lpSum(B[i]*y[i] for i in P)\nm += lpSum(C[i]*y[i]   for i in P) <= 80000     # C1 ngân sách 5 năm\nm += lpSum(C12[i]*y[i] for i in P) <= 40000     # C2 ngân sách năm 1-2\nm += y[1]+y[2] <= 1                             # C3 loại trừ TT dữ liệu\nm += y[8]  <= y[12]; m += y[13] <= y[12]        # C4,C5 tiên quyết đào tạo\nm += y[4]+y[5] >= 1; m += y[14] >= 1            # C6 chính phủ số & an ninh\nm += lpSum(y[i] for i in P) >= 7\nm += lpSum(y[i] for i in P) <= 11               # C7 số lượng dự án\nm.solve(PULP_CBC_CMD(msg=False))\nsel=[i for i in P if y[i].value()>0.5]\nprint('Chọn:', sel, ' NPV =', value(m.objective))   # Z*=115400", "bai6": "import numpy as np, pandas as pd\ndf = pd.read_csv('vietnam_regions_2024.csv')\ncrit=['grdp_pc','fdi','digital','ai_ready','trained','rd','internet','gini']\nbenefit=np.array([1,1,1,1,1,1,1,0], bool)   # gini là tiêu chí chi phí\nX=df[crit].values.astype(float)\n\ndef topsis(X, w):\n    R = X / np.sqrt((X**2).sum(0))           # chuẩn hóa vector\n    V = R * w                                # ma trận có trọng số\n    Ap = np.where(benefit, V.max(0), V.min(0))   # lý tưởng dương A*\n    An = np.where(benefit, V.min(0), V.max(0))   # lý tưởng âm  A-\n    Sp = np.sqrt(((V-Ap)**2).sum(1))             # khoảng cách Euclide\n    Sn = np.sqrt(((V-An)**2).sum(1))\n    return Sn / (Sp + Sn)                         # hệ số gần gũi C*\n\ndef entropy_w(X):\n    Xp=X.copy(); Xp[:,~benefit]=1/Xp[:,~benefit]\n    P=Xp/Xp.sum(0); k=1/np.log(len(X))\n    E=-k*(P*np.log(P+1e-12)).sum(0)\n    return (1-E)/(1-E).sum()                       # trọng số khách quan\n\nw_expert=np.array([.10,.10,.15,.20,.15,.15,.05,.10])\nprint('Expert :', topsis(X, w_expert).round(3))    # ĐNB dẫn đầu\nprint('Entropy:', topsis(X, entropy_w(X)).round(3))# ĐBSH vượt lên #1", "bai7": "import numpy as np\nfrom pymoo.core.problem import ElementwiseProblem\nfrom pymoo.algorithms.moo.nsga2 import NSGA2\nfrom pymoo.optimize import minimize\n\nclass VietnamDigital(ElementwiseProblem):\n    def __init__(s):\n        super().__init__(n_var=24, n_obj=4, n_ieq_constr=14,\n                         xl=np.zeros(24), xu=np.full(24, 12000.))\n        s.beta=beta_matrix          # (6,4) như Bài 4\n        s.e  =np.array([.42,.55,.48,.32,.62,.38])   # cường độ phát thải\n        s.rho=np.array([.18,.45,.28,.12,.52,.22])   # rủi ro dữ liệu / AI\n        s.sig=np.array([.32,.28,.30,.35,.25,.30])   # giảm rủi ro / H\n    def _evaluate(s, x, out, *a, **k):\n        X=x.reshape(6,4); tot=X.sum(1)\n        f1=-(s.beta*X).sum()                         # max GDP gain\n        f2=np.abs(tot-tot.mean()).mean()             # min bất bình đẳng (MAD~Gini)\n        f3=(s.e*(X[:,0]+X[:,2])).sum()               # min phát thải\n        f4=(s.rho*X[:,2]).sum()-(s.sig*X[:,3]).sum() # min rủi ro ròng\n        g =[X.sum()-50000]+[5000-tot[i] for i in range(6)]\\\n            +[tot[i]-12000 for i in range(6)]+[12000-X[:,3].sum()]\n        out['F']=[f1,f2,f3,f4]; out['G']=g\n\nres = minimize(VietnamDigital(), NSGA2(pop_size=100),\n               ('n_gen',200), seed=42, verbose=False)\n# Chọn nghiệm thỏa hiệp bằng TOPSIS, trọng số (0.40,0.25,0.20,0.15)\nF=res.F.copy(); F[:,0]*=-1\n# ... áp TOPSIS trên F -> C*=0.847", "bai8": "import numpy as np\nfrom scipy.optimize import minimize\nT=10; dK,dD,dAI=0.05,0.12,0.15; thH,mu=0.8,0.02\nph=(0.003,0.002,0.004); rho=0.97; a,b,g,d,t=0.33,0.42,0.10,0.08,0.07\nK0,L0,D0,AI0,H0 = 27500.,53.9,20.3,86.,30.; A0=30.94   # nối từ Bài 1\n\ndef welfare(shares):           # shares: (T,4) tỉ lệ đầu tư IK,ID,IAI,IH trên Y\n    K,D,AI,H,A,W = K0,D0,AI0,H0,A0,0.0\n    for sK,sD,sA,sH in shares:\n        Y = A*K**a*L0**b*D**g*AI**d*H**t\n        C = max((1-(sK+sD+sA+sH))*Y, 1.0)\n        W += rho**0 * np.log(C)                      # U(C)=ln C, chiết khấu ρ\n        K=(1-dK)*K+sK*Y; D=(1-dD)*D+sD*Y*2.8e-3\n        AI=(1-dAI)*AI+sA*Y*1.8e-2; H=H+thH*sH*Y*7.7e-4-mu*H\n        A=A*(1+ph[0]*D/100+ph[1]*AI/100+ph[2]*H/100) # TFP nội sinh\n    return W\n\n# tối đa hóa phúc lợi với ràng buộc Σđầu tư<=42% và stock_cuối >= stock_đầu\nneg=lambda z: -welfare(z.reshape(T,4))\ncons=[{'type':'ineq','fun':lambda z,i=i:0.42-z.reshape(T,4)[i].sum()} for i in range(T)]\nr=minimize(neg, np.full(T*4,0.12), method='SLSQP',\n           bounds=[(0,0.38)]*40, constraints=cons)\nprint('Tỉ lệ đầu tư/GDP:', (r.x.reshape(T,4).sum(1)*100).round(1))\n# 39.3 -> 31.7  => FRONT-LOADED (đầu tư sớm để compound)", "bai9": "import cvxpy as cp, numpy as np   # (hoặc PuLP — bài toán tuyến tính)\nrisk=np.array([18,42,25,38,52,35,28,22])/100\na1=np.array([8.5,32.5,12.8,22.4,45.8,28.5,62.5,18.5])   # việc mới / tỷ AI\nb1=np.array([45,28,35,32,22,30,20,55.])                 # nâng cấp / tỷ H\nc1=np.array([5.2,62.4,18.5,48.2,72.5,42.8,32.5,12.5])   # dịch chuyển / tỷ AI\nd1=np.array([50,32,42,38,26,36,24,62.])                 # năng lực ĐT / tỷ H\n\nxA=cp.Variable(8, nonneg=True); xH=cp.Variable(8, nonneg=True)\nNet = cp.multiply(a1,xA) + cp.multiply(b1,xH) - cp.multiply(c1*risk, xA)\ncon=[cp.sum(xA+xH) <= 30000, Net >= 0,\n     cp.multiply(c1*risk,xA) <= cp.multiply(d1,xH)]   # Displaced <= RetrainCap\ncp.Problem(cp.Maximize(cp.sum(Net)), con).solve()\nprint('Tổng NetJob =', round(float(cp.sum(Net).value)))  # ~1.43 triệu việc", "bai10": "import pyomo.environ as pyo\nS=['s1','s2','s3','s4']; J=['I','D','AI','H']\np ={'s1':.30,'s2':.45,'s3':.20,'s4':.05}\nb0={'I':1.00,'D':1.10,'AI':1.25,'H':0.95}\nbs={('s1','I'):1.25,('s1','D'):1.35,('s1','AI'):1.55,('s1','H'):1.05,\n    ('s2','I'):1.00,('s2','D'):1.10,('s2','AI'):1.25,('s2','H'):0.95,\n    ('s3','I'):0.75,('s3','D'):0.85,('s3','AI'):0.90,('s3','H'):1.00,\n    ('s4','I'):0.40,('s4','D'):0.50,('s4','AI'):0.55,('s4','H'):1.10}\nm=pyo.ConcreteModel()\nm.x=pyo.Var(J, domain=pyo.NonNegativeReals)            # first-stage\nm.y=pyo.Var(S, J, domain=pyo.NonNegativeReals)         # recourse\nm.b1=pyo.Constraint(expr=sum(m.x[j] for j in J) <= 65000)\nm.b2=pyo.Constraint(S, rule=lambda m,s: sum(m.y[s,j] for j in J) <= 15000)\nm.link=pyo.Constraint(S, rule=lambda m,s: m.y[s,'AI'] <= 0.5*m.x['H'])\nm.obj=pyo.Objective(sense=pyo.maximize, rule=lambda m:\n    sum(b0[j]*m.x[j] for j in J) +\n    sum(p[s]*sum(bs[s,j]*m.y[s,j] for j in J) for s in S))\npyo.SolverFactory('glpk').solve(m)\n# VSS = Z_SP - Z_EEV ; EVPI = Z_WS - Z_SP  (đo giá trị của tư duy xác suất)", "bai11": "import numpy as np\nalloc={0:[.70,.10,.10,.10],1:[.40,.25,.15,.20],2:[.25,.45,.15,.15],\n       3:[.20,.20,.45,.15],4:[.30,.20,.10,.40]}     # 5 hành động ngân sách\nQ=np.zeros((3,3,3,3,5)); rng=np.random.default_rng(2026)\ngamma,alpha=0.95,0.1\n\nfor ep in range(15000):\n    # EXPLORING STARTS: reset ngẫu nhiên để cả 81 trạng thái cùng hội tụ\n    s=tuple(rng.integers(3,size=4))\n    for _ in range(10):\n        eps=max(0.05, 1-ep/7000)\n        a = int(rng.integers(5)) if rng.random()<eps else int(np.argmax(Q[s]))\n        s2, r = env_step(s, a)        # mô phỏng: AI hiệu quả CHỈ khi đã có nền D&H\n        Q[s+(a,)] += alpha*(r + gamma*Q[s2].max() - Q[s+(a,)])\n        s = s2\n\npolicy = lambda s: int(np.argmax(Q[s]))   # π*(s) = argmax_a Q(s,a)\n# π* đạt phúc lợi 6.85 — vượt mọi luật cố định (AI dẫn dắt 6.04, Cân bằng 2.64)"};
+const COL={brand:'#2DD4BF',red:'#FB7185',gold:'#FBBF24',green:'#4ADE80',blue:'#60A5FA',teal:'#22D3EE',purple:'#C084FC',soft:'#94A3B8'};
+const fmt=(x,n=1)=>(x==null?'—':Number(x).toLocaleString('vi-VN',{minimumFractionDigits:n,maximumFractionDigits:n}));
+const charts={};
+function mkChart(id,cfg){if(typeof Chart==='undefined')return;if(charts[id])charts[id].destroy();const el=document.getElementById(id);if(el)charts[id]=new Chart(el,cfg);}
+if(typeof Chart!=='undefined'){Chart.defaults.font.family="'Inter','Public Sans',sans-serif";Chart.defaults.color=COL.soft;Chart.defaults.font.size=12;}
+function stat(l,v,s,c){return `<div class="stat" style="--c:${c}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;}
+function secH(ico,color,title,d){return `<div class="sec-h"><div class="ico" style="background:${color}">${ico}</div><div><h2>${title}</h2><div class="d">${d}</div></div></div>`;}
+
+// ---- math model block: eqs[] (tex display), vars (html), constraints[] = [tex, name] ----
+function model(label,eqs,vars,cons){
+  let h='<div class="model"><div class="mlabel">'+label+'</div>';
+  eqs.forEach(t=>{h+='<div class="eq" data-tex="'+t.replace(/"/g,'&quot;')+'"></div>';});
+  if(vars)h+='<div class="vars">'+vars+'</div>';
+  if(cons&&cons.length){h+='<ul class="constraints">'+cons.map(c=>`<li><span class="cx" data-tex="${c[0].replace(/"/g,'&quot;')}"></span><span class="cn">${c[1]||''}</span></li>`).join('')+'</ul>';}
+  return h+'</div>';
+}
+// ---- python syntax highlighter (lightweight) ----
+function pyHi(src){
+  const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return src.split('\n').map(line=>{
+    // comments
+    let m=line.match(/^(.*?)(#.*)$/);
+    let codePart=m?m[1]:line, com=m?m[2]:'';
+    let h=esc(codePart);
+    // strings
+    h=h.replace(/('[^']*'|"[^"]*")/g,'<span class="st">$1</span>');
+    // keywords
+    h=h.replace(/\b(import|from|def|for|in|if|else|elif|return|lambda|while|class|and|or|not|None|True|False|as|print)\b/g,'<span class="kw">$1</span>');
+    return h+(com?'<span class="cm">'+esc(com)+'</span>':'');
+  }).join('\n');
+}
+function code(id,title){
+  const src=CODE[id]||'';
+  return `<div class="codewrap"><div class="codehead" onclick="this.parentNode.classList.toggle('open')">
+    <span class="py">Python</span><span class="ttl">${title}</span>
+    <span class="tog"><span class="chev">▸</span> xem mã</span></div>
+    <div class="codebody"><pre>${pyHi(src)}</pre></div></div>`;
+}
+function check(html,warn){return `<div class="check${warn?' warn':''}"><span class="ic">${warn?'!':'✓'}</span><div>${html}</div></div>`;}
+
+const RUBRIC=[
+['Tính đúng đắn của mô hình toán','Hàm mục tiêu, ràng buộc đầy đủ; ký hiệu nhất quán; biện luận tính lồi/khả thi',3.0],
+['Triển khai mã Python','Chạy được, đúng kết quả, tái lập; dùng đúng thư viện; mô-đun hóa',2.5],
+['Kết quả số và kiểm tra','Bảng kết quả rõ; kiểm tra dấu, bậc độ lớn, phân tích nhạy',1.5],
+['Trực quan hóa','≥2 biểu đồ, nhãn trục & đơn vị đầy đủ',1.0],
+['Diễn giải kinh tế','Liên hệ thực tiễn VN; thảo luận đánh đổi chính sách',1.5],
+['Hình thức báo cáo','Trình bày rõ, trích dẫn nguồn, tệp sạch',0.5],
+];
+const LEVELS=[
+['Dễ','Bài 1–3','Hàm sản xuất, LP đơn giản, MCDM cơ bản','numpy · pandas · scipy',COL.green],
+['Trung bình','Bài 4–6','LP đầy đủ, MIP, TOPSIS','pulp · cvxpy · scikit-criteria',COL.blue],
+['Khá khó','Bài 7–9','Pareto NSGA-II, tối ưu động, lao động','pymoo · cvxpy · numpy',COL.gold],
+['Khó','Bài 10–12','Stochastic LP, Q-learning, tích hợp','pyomo · gymnasium · streamlit',COL.red],
+];
+const BAILIST=[
+['bai1','📈','1','Cobb-Douglas mở rộng','Hàm sản xuất + TFP'],
+['bai2','💰','2','Phân bổ ngân sách','LP + shadow price'],
+['bai3','🏆','3','Chỉ số ưu tiên ngành','Min-max + trọng số'],
+['bai4','🗺️','4','LP phân bổ vùng miền','LP + công bằng vùng'],
+['bai5','📋','5','MIP chọn dự án','Knapsack nhị phân'],
+['bai6','🎯','6','TOPSIS xếp hạng vùng','MCDM + Entropy'],
+['bai7','🧬','7','NSGA-II đa mục tiêu','Pareto 4 mục tiêu'],
+['bai8','⏱️','8','Tối ưu động','DP liên thời gian'],
+['bai9','👥','9','Tác động AI tới lao động','NetJob LP'],
+['bai10','🎲','10','Quy hoạch ngẫu nhiên','Two-stage SP'],
+['bai11','🧠','11','Q-learning chính sách','RL · MDP'],
+['bai12','⚙️','12','AIDEOM-VN tích hợp','6 module'],
+];
+
+// ============ HOME ============
+function renderHome(){
+const lvls=LEVELS.map(([t,r,s,tool,c])=>`<div class="lvl" style="--c:${c}"><div class="t">${t}</div><div class="n">${r} · ${s}</div><div class="b">${tool}</div></div>`).join('');
+const cards=BAILIST.map(([id,e,no,nm,sk])=>`<div class="bcard" data-go="${id}"><span class="dirno">${no.padStart(2,'0')}</span><div><h4>${nm}</h4><span class="sk">${sk}</span></div><span class="arr">→</span></div>`).join('');
+const rrows=RUBRIC.map(([k,d,w])=>`<tr><td>${k}</td><td style="text-align:left">${d}</td><td class="mono">${fmt(w,1)}</td></tr>`).join('');
+return `
+<div class="term-banner">
+<div class="tb-bar"><span class="tb-dot r"></span><span class="tb-dot y"></span><span class="tb-dot g"></span><span class="tb-path">Tổng quan đề bài</span></div>
+<div class="tb-body">
+<div class="tb-line"><span class="prompt">▸</span> Hệ thống mô hình ra quyết định · dữ liệu thực Việt Nam 2020–2025 · 12 bài tập</div>
+<div class="tb-out">✓ Sẵn sàng — mọi kết quả tính bằng Python (numpy/scipy/PuLP/pymoo), tái lập được</div>
+<h1>Phát triển kinh tế Việt Nam<br>trong <em>kỉ nguyên AI</em></h1>
+<p>12 module giải bài toán chính sách: hàm sản xuất Cobb-Douglas, tối ưu LP/MIP, MCDM, đa mục tiêu, tối ưu động, ngẫu nhiên và học tăng cường. Mỗi bài có <b>mô hình toán đầy đủ</b>, <b>mã Python</b> và <b>diễn giải chính sách</b>.</p>
+<div class="chips"><span class="chip">DATA · VN 2020–2025</span><span class="chip">MÔ HÌNH TOÁN + CODE</span><span class="chip">TÁI LẬP ĐƯỢC</span></div>
+</div></div>
+
+${secH('◇',COL.brand,'Chỉ số vĩ mô 2025','// macro snapshot — NSO 2026')}
+<div class="stats">
+${stat('GDP 2025','514,0 tỷ USD','↑ 8,02% YoY',COL.green)}
+${stat('Kinh tế số / GDP','≈19,5%','↑ 1,2 đpt',COL.teal)}
+${stat('FDI giải ngân','27,6 tỷ USD','↑ 8,9%',COL.gold)}
+${stat('GDP / người','5.026 USD','↑ 6,9%',COL.blue)}
+</div>
+<div class="chart-card"><h4>GDP &amp; cơ cấu tăng trưởng 2020–2025</h4><p class="cap">GDP danh nghĩa (ngh.tỷ VND, cột) và tốc độ tăng trưởng thực (%, đường).</p><div class="cbox"><canvas id="c0_gdp"></canvas></div></div>
+
+${secH('◆',COL.gold,'Ma trận độ khó','// 4 cấp · 12 bài')}
+<div class="lvl-grid">${lvls}</div>
+
+${secH('▤',COL.green,'Danh mục module','// chọn để mở')}
+<div class="bgrid">${cards}</div>
+
+${secH('◈',COL.purple,'Tiêu chí chấm điểm (Phụ lục F2)','// rubric · thang 10')}
+<div class="tbl"><table><thead><tr><th>Tiêu chí</th><th>Mô tả mức xuất sắc</th><th>Trọng số</th></tr></thead><tbody>${rrows}</tbody><tfoot><tr><td>TỔNG</td><td style="text-align:left">—</td><td class="mono">10,0</td></tr></tfoot></table></div>
+<div class="note">Trang này bám sát rubric: mỗi bài trình bày <b>mô hình toán</b> (3,0đ), <b>mã Python tái lập</b> (2,5đ), <b>kết quả &amp; kiểm tra</b> (1,5đ), <b>biểu đồ có đơn vị</b> (1,0đ) và <b>diễn giải chính sách Việt Nam</b> (1,5đ).</div>
+
+<div class="footnote">Nguồn dữ liệu: Cục Thống kê quốc gia (NSO/GSO), Ngân hàng Thế giới, Bộ KH-CN, Global Innovation Index 2025 (WIPO). Số liệu CSV làm tròn phục vụ giảng dạy · truy xuất gốc tại <code>nso.gov.vn</code>. Khung pháp lý: Nghị quyết 57-NQ/TW, QĐ 749/127/411/QĐ-TTg, cam kết COP26.</div>
+`;}
+function initHome(){
+document.querySelectorAll('.bcard[data-go]').forEach(c=>c.addEventListener('click',()=>show(c.dataset.go)));
+const Y=[8044.4,8487.5,9513.3,10221.8,11511.9,12847.6], gr=[2.91,2.58,8.12,5.05,7.09,8.02];
+mkChart('c0_gdp',{data:{labels:[2020,2021,2022,2023,2024,2025],datasets:[
+ {type:'bar',label:'GDP (ngh.tỷ VND)',data:Y,backgroundColor:'rgba(45,212,191,.5)',borderColor:COL.brand,borderWidth:1,borderRadius:5,yAxisID:'y'},
+ {type:'line',label:'Tăng trưởng (%)',data:gr,borderColor:COL.gold,borderWidth:3,tension:.3,pointRadius:4,yAxisID:'y1'}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{position:'left',title:{display:true,text:'GDP (ngh.tỷ)'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'%'}}}}});
+}
+
+// ============ BÀI 1 ============
+function renderBai1(){
+const b=R.bai1;
+const decompRows=b.decomp.map(([k,v])=>`<tr><td>${k}</td><td class="mono ${v<0?'bad':''}">${fmt(v,1)}%</td></tr>`).join('');
+return `
+<div class="crumb">Cấp độ Dễ · Bài 1/12</div>
+<h1>Hàm sản xuất Cobb–Douglas mở rộng</h1>
+<p class="sub">Ước lượng TFP, phân rã tăng trưởng và dự báo GDP Việt Nam 2020–2030 với các yếu tố số hóa D, năng lực AI và vốn nhân lực H.</p>
+<div class="objective">🎯 <b>Mục tiêu:</b> Tính TFP qua giải ngược hàm sản xuất, đo MAPE của dự báo, phân rã đóng góp tăng trưởng và mô phỏng kịch bản 2030.</div>
+
+${secH('Σ',COL.brand,'Mô hình toán học','Lợi suất không đổi: α+β+γ+δ+θ=1')}
+${model('Hàm sản xuất Cobb-Douglas mở rộng (Mục 6)',
+  ['Y_t = A_t\\,K_t^{\\alpha}\\,L_t^{\\beta}\\,D_t^{\\gamma}\\,AI_t^{\\delta}\\,H_t^{\\theta}',
+   '\\Delta\\ln Y_t = \\Delta\\ln A_t + \\alpha\\Delta\\ln K_t + \\beta\\Delta\\ln L_t + \\gamma\\Delta\\ln D_t + \\delta\\Delta\\ln AI_t + \\theta\\Delta\\ln H_t'],
+  '<code>Y</code> GDP (ngh.tỷ VND) · <code>K</code> vốn vật chất · <code>L</code> lao động · <code>D</code> KTS/GDP · <code>AI</code> nghìn DN số · <code>H</code> %LĐ qua đào tạo. Hệ số đề xuất: α=0,33; β=0,42; γ=0,10; δ=0,08; θ=0,07 (Σ=1 ⇒ lợi suất không đổi theo quy mô). Phương trình hai là dạng <b>phân rã tăng trưởng</b> (growth accounting).',
+  [['\\alpha+\\beta+\\gamma+\\delta+\\theta=1','lợi suất không đổi theo quy mô'],
+   ['A_t = Y_t/(K_t^{\\alpha}L_t^{\\beta}D_t^{\\gamma}AI_t^{\\delta}H_t^{\\theta})','giải ngược TFP']])}
+${code('bai1','Giải ngược TFP, MAPE, phân rã tăng trưởng & dự báo 2030')}
+
+${secH('1',COL.green,'Năng suất nhân tố tổng hợp Aₜ','Câu 1.4.1 · giải ngược từ hàm sản xuất')}
+<div class="stats">
+${stat('A₂₀₂₀',fmt(b.A[0],2),'điểm gốc',COL.green)}
+${stat('A₂₀₂₅',fmt(b.A[5],2),'mới nhất',COL.green)}
+${stat('Tăng TFP',fmt(b.Agrowth,2)+'%','bình quân/năm',COL.gold)}
+${stat('Aₜ trung bình',fmt(b.Amean,2),'cho dự báo',COL.teal)}
+</div>
+<div class="chart-card"><h4>Xu hướng TFP 2020–2025</h4><p class="cap">Aₜ (chỉ số) tăng đều — tăng trưởng dựa ngày càng nhiều vào hiệu quả tổng hợp.</p><div class="cbox"><canvas id="c1_tfp"></canvas></div></div>
+${check('TFP tăng liên tục '+fmt(b.A[0],2)+' → '+fmt(b.A[5],2)+' (~'+fmt(b.Agrowth,1)+'%/năm). Dấu dương & độ lớn hợp lý cho một nền kinh tế đang nâng cấp công nghệ.')}
+
+${secH('2',COL.blue,'Dự báo Ŷ & MAPE','Câu 1.4.2 · TFP cố định = trung bình')}
+<div class="stats">
+${stat('MAPE',fmt(b.MAPE,2)+'%','sai số TB tuyệt đối',COL.red)}
+${stat('Ŷ₂₀₂₀',fmt(b.Yhat[0],0),'thực: 8.044',COL.blue)}
+${stat('Ŷ₂₀₂₅',fmt(b.Yhat[5],0),'thực: 12.848',COL.blue)}
+${stat('Chất lượng',b.MAPE<10?'Tốt':'Khá','<10% chấp nhận',COL.green)}
+</div>
+<div class="chart-card"><h4>GDP thực tế vs dự báo (TFP cố định)</h4><p class="cap">Cột = GDP thực (ngh.tỷ); đường nét đứt = Ŷ với A cố định ⇒ cao đầu kỳ, thấp cuối kỳ.</p><div class="cbox"><canvas id="c1_fc"></canvas></div></div>
+
+${secH('3',COL.gold,'Phân rã tăng trưởng','Câu 1.4.3 · tổng tăng trưởng '+fmt(b.gY,2)+'%/năm')}
+<div class="grid2">
+<div class="chart-card"><h4>Tỷ lệ đóng góp (%)</h4><p class="cap">TFP + Vốn chiếm ~81%; trong nhóm yếu tố mới, Số hóa D vượt AI và H.</p><div class="cbox sm"><canvas id="c1_dec"></canvas></div></div>
+<div class="tbl" style="align-self:start"><table><thead><tr><th>Yếu tố</th><th>Tỷ lệ</th></tr></thead><tbody>${decompRows}</tbody><tfoot><tr><td>TỔNG</td><td class="mono">100,0%</td></tr></tfoot></table></div>
+</div>
+${check('Lao động L đóng góp âm nhẹ ('+fmt(b.decomp[2][1],2)+'%) — phản ánh L hầu như đi ngang 2020–2025; tăng trưởng đến từ TFP, vốn và số hóa, không từ tăng lượng lao động.')}
+
+${secH('4',COL.purple,'Kịch bản GDP 2030','Câu 1.4.4 · kéo thanh trượt để mô phỏng')}
+<div class="grid2">
+<div class="panel"><div class="ctrls">
+<div class="ctrl"><label>Số hóa D (%) <span class="v" id="v_d">30</span></label><input type="range" id="s_d" min="19.5" max="40" step="0.5" value="30"><div class="h">2025: 19,5% · mục tiêu QĐ749: 30%</div></div>
+<div class="ctrl"><label>AI (nghìn DN) <span class="v" id="v_ai">100</span></label><input type="range" id="s_ai" min="80" max="160" step="1" value="100"></div>
+<div class="ctrl"><label>Nhân lực H (%) <span class="v" id="v_h">35</span></label><input type="range" id="s_h" min="29.2" max="50" step="0.5" value="35"></div>
+<div class="ctrl"><label>Tăng vốn K (%/năm) <span class="v" id="v_gk">6.0</span></label><input type="range" id="s_gk" min="0" max="10" step="0.5" value="6"></div>
+<div class="ctrl"><label>Tăng TFP (%/năm) <span class="v" id="v_ga">1.2</span></label><input type="range" id="s_ga" min="0" max="5" step="0.1" value="1.2"></div>
+<button class="rbtn" id="s_reset">↺ Khôi phục gốc đề bài</button>
+</div></div>
+<div class="bigres"><div class="l">GDP dự báo 2030</div><div class="n"><span id="y2030">—</span> <small>ngh.tỷ VND</small></div>
+<div class="rows"><div><span>So với 2025</span><b id="r_mult">—</b></div><div><span>Tăng BQ 25–30</span><b id="r_cagr">—</b></div><div><span>GDP/người</span><b id="r_pc">—</b></div></div></div>
+</div>
+<div class="chart-card"><h4>Quỹ đạo GDP → 2030</h4><div class="cbox"><canvas id="c1_sc"></canvas></div></div>
+
+${secH('💬',COL.soft,'Thảo luận chính sách','Câu 1.5')}
+<div class="qa"><div class="q">a) TFP tăng hay giảm? Nói gì về chất lượng tăng trưởng?</div><div class="a">TFP tăng đều ${fmt(b.A[0],2)}→${fmt(b.A[5],2)} (~${fmt(b.Agrowth,1)}%/năm), đóng góp ~${fmt(b.decomp[0][1],0)}% tăng trưởng — chất lượng tăng trưởng cải thiện, đúng định hướng Nghị quyết 57-NQ/TW về dựa vào KH-CN & đổi mới sáng tạo.</div></div>
+<div class="qa"><div class="q">b) Yếu tố mới (D, AI, H) nào đóng góp nhiều nhất?</div><div class="a"><span class="pill-i">Số hóa D</span> dẫn đầu (~${fmt(b.decomp[3][1],1)}%) nhờ KTS/GDP tăng 12→19,5% và γ cao nhất trong ba; AI ~${fmt(b.decomp[4][1],1)}%, H ~${fmt(b.decomp[5][1],1)}%. H thấp vì %LĐ qua đào tạo tăng chậm (24→29%).</div></div>
+<div class="qa"><div class="q">c) Mục tiêu 30% KTS/GDP 2030 khả thi?</div><div class="a">Khả thi nhưng D cần tăng ~1,8 điểm/năm (so với ~1,5 vừa qua) và H phải tăng song song để giữ biên hấp thụ — nếu không, đóng góp biên của D sẽ giảm dần (quy luật lợi suất giảm dần của số mũ γ).</div></div>
+`;}
+function initBai1(){
+const b=R.bai1, years=[2020,2021,2022,2023,2024,2025];
+const Y=[8044.4,8487.5,9513.3,10221.8,11511.9,12847.6];
+mkChart('c1_tfp',{type:'line',data:{labels:years,datasets:[{label:'Aₜ',data:b.A,borderColor:COL.green,backgroundColor:'rgba(74,222,128,.12)',borderWidth:3,fill:true,tension:.3,pointRadius:5,pointBackgroundColor:'#fff',pointBorderColor:COL.green,pointBorderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'TFP (chỉ số)'}}}}});
+mkChart('c1_fc',{data:{labels:years,datasets:[{type:'bar',label:'Thực tế',data:Y,backgroundColor:'rgba(96,165,250,.7)',borderRadius:5},{type:'line',label:'Dự báo Ŷ',data:b.Yhat,borderColor:COL.red,borderWidth:3,borderDash:[6,4],pointRadius:4,tension:.2,fill:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{title:{display:true,text:'GDP (ngh.tỷ)'}}}}});
+mkChart('c1_dec',{type:'bar',data:{labels:b.decomp.map(d=>d[0]),datasets:[{data:b.decomp.map(d=>d[1]),backgroundColor:[COL.green,COL.blue,COL.red,COL.gold,COL.teal,COL.purple],borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'% tăng trưởng'}},x:{ticks:{maxRotation:35}}}}});
+const A2025=b.A[5],K2025=25900,L2025=53.4,Y2025=12847.6;
+const a=0.33,bb=0.42,g=0.10,d=0.08,th=0.07,D5=19.5,AI5=80.1,H5=29.2;
+let scChart;
+function gv(id){return document.getElementById(id).value;}
+function calc(){
+ const d_=+gv('s_d'),ai_=+gv('s_ai'),h_=+gv('s_h'),gk=+gv('s_gk')/100,ga=+gv('s_ga')/100,gl=0.006;
+ document.getElementById('v_d').textContent=fmt(d_,1);document.getElementById('v_ai').textContent=fmt(ai_,0);
+ document.getElementById('v_h').textContent=fmt(h_,1);document.getElementById('v_gk').textContent=fmt(gk*100,1);document.getElementById('v_ga').textContent=fmt(ga*100,1);
+ const tr=[];for(let t=0;t<=5;t++){const Kt=K2025*Math.pow(1+gk,t),Lt=L2025*Math.pow(1+gl,t),At=A2025*Math.pow(1+ga,t);
+  const Dt=D5+(d_-D5)*t/5,AIt=AI5+(ai_-AI5)*t/5,Ht=H5+(h_-H5)*t/5;
+  tr.push(At*Math.pow(Kt,a)*Math.pow(Lt,bb)*Math.pow(Dt,g)*Math.pow(AIt,d)*Math.pow(Ht,th));}
+ const y30=tr[5],cagr=(Math.pow(y30/Y2025,1/5)-1)*100,pc=y30*1e12/110e6/25500;
+ document.getElementById('y2030').textContent=fmt(y30,0);
+ document.getElementById('r_mult').textContent=fmt(y30/Y2025,2)+'×';
+ document.getElementById('r_cagr').textContent=fmt(cagr,2)+'%/năm';
+ document.getElementById('r_pc').textContent='~'+fmt(pc,0)+' USD';
+ const labels=[...years,2026,2027,2028,2029,2030];
+ const actual=[...Y,null,null,null,null,null];
+ const proj=[null,null,null,null,null,Y2025,tr[1],tr[2],tr[3],tr[4],tr[5]];
+ const data={labels,datasets:[{label:'Thực tế',data:actual,borderColor:COL.blue,backgroundColor:'rgba(96,165,250,.1)',borderWidth:3,pointRadius:4,tension:.25,fill:true},{label:'Dự báo→2030',data:proj,borderColor:COL.red,borderWidth:3,borderDash:[7,4],pointRadius:4,tension:.25}]};
+ if(scChart){scChart.data=data;scChart.update();}else scChart=new Chart(document.getElementById('c1_sc'),{type:'line',data,options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{title:{display:true,text:'GDP (ngh.tỷ)'}}}}});
+}
+['s_d','s_ai','s_h','s_gk','s_ga'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('input',calc);});
+const rb=document.getElementById('s_reset');if(rb)rb.addEventListener('click',()=>{document.getElementById('s_d').value=30;document.getElementById('s_ai').value=100;document.getElementById('s_h').value=35;document.getElementById('s_gk').value=6;document.getElementById('s_ga').value=1.2;calc();});
+calc();
+}
+
+// ============ BÀI 2 ============
+function renderBai2(){const b=R.bai2;
+const xn=['Hạ tầng số','AI & dữ liệu','Nhân lực số','R&D công nghệ'];
+const rows=b.x.map((v,i)=>`<tr><td>${xn[i]}</td><td class="mono">${fmt(v,1)}</td></tr>`).join('');
+return `
+<div class="crumb">Cấp độ Dễ · Bài 2/12</div><h1>Phân bổ ngân sách 4 hạng mục đầu tư số</h1>
+<p class="sub">Quy hoạch tuyến tính tối đa hóa tăng GDP từ 100 nghìn tỷ VND ngân sách trung ương 2026.</p>
+<div class="objective">🎯 <b>Mục tiêu:</b> Giải LP bằng scipy/PuLP, hiểu giá đối ngẫu (shadow price) và phân tích độ nhạy ngân sách.</div>
+${secH('Σ',COL.brand,'Mô hình toán học','4 biến · 6 ràng buộc')}
+${model('Bài toán quy hoạch tuyến tính (LP)',
+ ['\\max\\; Z = 0{,}85x_1 + 1{,}20x_2 + 0{,}95x_3 + 1{,}35x_4'],
+ '<code>x₁</code> hạ tầng số · <code>x₂</code> AI &amp; dữ liệu · <code>x₃</code> nhân lực số · <code>x₄</code> R&amp;D (ngh.tỷ VND). Hệ số mục tiêu = số đồng GDP tăng thêm cho mỗi đồng đầu tư (ước lượng từ World Bank Digital Economy 2024 &amp; OECD AI 2024).',
+ [['x_1{+}x_2{+}x_3{+}x_4 \\le 100','ngân sách tổng'],
+  ['x_1\\ge25,\\;x_2\\ge15,\\;x_3\\ge20,\\;x_4\\ge10','sàn tối thiểu QĐ411'],
+  ['x_2+x_4 \\ge 0{,}35(x_1{+}x_2{+}x_3{+}x_4)','tỷ trọng công nghệ chiến lược'],
+  ['x_1,x_2,x_3,x_4 \\ge 0','không âm']])}
+${code('bai2','Giải LP bằng scipy.linprog + giá đối ngẫu bằng PuLP')}
+
+${secH('1',COL.green,'Phân bổ tối ưu','Câu 2.4.1')}
+<div class="stats">${stat('Z*',fmt(b.Z,2),'ngh.tỷ GDP tăng',COL.green)}${stat('R&D (x₄)',fmt(b.x[3],0),'hệ số cao nhất 1,35',COL.gold)}${stat('AI+R&D',b.AI_RD_pct+'%','≥35% chiến lược',COL.brand)}${stat('Shadow price',fmt(b.shadow_budget,2),'của ràng buộc B',COL.purple)}</div>
+<div class="grid2"><div class="chart-card"><h4>Phân bổ tối ưu</h4><p class="cap">Vốn dư dồn về R&amp;D (hệ số biên cao nhất 1,35).</p><div class="cbox sm"><canvas id="c2_alloc"></canvas></div></div>
+<div class="tbl" style="align-self:start"><table><thead><tr><th>Hạng mục</th><th>Phân bổ</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td>Tổng</td><td class="mono">100,0</td></tr></tfoot></table></div></div>
+${check('Tất cả ràng buộc sàn đều ĐÚNG ('+b.x.join(', ')+'); AI+R&D = '+b.AI_RD_pct+'% ≥ 35%. Z* = '+fmt(b.Z,2)+' ngh.tỷ — bậc độ lớn hợp lý (~1% GDP 2025).')}
+
+${secH('2',COL.teal,'Giá đối ngẫu (shadow price)','Câu 2.4.2 · PuLP dual values')}
+<div class="tbl"><table><thead><tr><th>Ràng buộc</th><th>Dual</th><th>Ý nghĩa chính sách</th></tr></thead><tbody>
+<tr><td>Ngân sách tổng ≤100</td><td class="mono win">1,35</td><td style="text-align:left">+1 ngh.tỷ vốn ⇒ +1,35 GDP (dồn vào R&D)</td></tr>
+<tr><td>x₁ ≥ 25 (hạ tầng)</td><td class="mono bad">−0,50</td><td style="text-align:left">buộc tăng hạ tầng làm giảm Z* 0,50/đơn vị</td></tr>
+<tr><td>x₃ ≥ 20 (nhân lực)</td><td class="mono bad">−0,40</td><td style="text-align:left">buộc nhân lực giảm Z* 0,40/đơn vị</td></tr>
+<tr><td>AI+R&D ≥35%</td><td class="mono">0,00</td><td style="text-align:left">không ràng buộc (đã thỏa dư: ${b.AI_RD_pct}%)</td></tr>
+</tbody></table></div>
+<div class="note"><b>Shadow price ngân sách = 1,35</b>: mỗi tỷ VND ngân sách thêm tạo 1,35 tỷ GDP, đổ vào R&D. Đây là cận trên hợp lý của chi phí cơ hội vốn công — nên mở rộng ngân sách khi suất sinh lợi vốn công thấp hơn 1,35.</div>
+
+${secH('3',COL.blue,'Độ nhạy ngân sách','Câu 2.4.3 · đường cong Z*(B)')}
+<div class="chart-card"><h4>Z* theo ngân sách tổng B</h4><p class="cap">Tuyến tính với độ dốc 1,35 = shadow price (mỗi 1 ngh.tỷ thêm ⇒ +1,35 GDP, dồn R&D).</p><div class="cbox"><canvas id="c2_sens"></canvas></div></div>
+
+${secH('4',COL.purple,'Ưu tiên nhân lực x₃≥30','Câu 2.4.4')}
+${check('Vẫn <b>khả thi</b>: x=['+b.x3_30.join(', ')+'], Z* giảm còn <b>'+fmt(b.x3_30_Z,2)+'</b> (mất '+fmt(b.Z-b.x3_30_Z,2)+' ngh.tỷ) — đúng bằng |shadow price x₃| × 10 = 0,40×... vì rút bớt R&D hệ số cao để bù nhân lực.',true)}
+
+${secH('💬',COL.soft,'Thảo luận','Câu 2.5')}
+<div class="qa"><div class="q">a) Shadow price ngân sách?</div><div class="a">1,35 ngh.tỷ GDP/1 ngh.tỷ vốn thêm — chi phí cơ hội biên của vốn công; nên mở rộng ngân sách khi lãi suất thực &lt; 35%.</div></div>
+<div class="qa"><div class="q">b) Vì sao R&D hệ số cao nhưng sàn thấp?</div><div class="a">Sàn thấp (10) để mô hình <i>tự</i> dồn vốn dư vào R&D — kết quả: x₄=40 dù sàn chỉ 10. Sàn cao sẽ thừa, vì tối ưu đã muốn đầu tư mạnh R&D.</div></div>
+<div class="qa"><div class="q">c) Tỷ lệ 35% công nghệ chiến lược khả thi?</div><div class="a">Trên giấy thì có (kết quả 55%), nhưng thực tế NSNN VN 2025 ưu tiên hạ tầng giao thông &amp; an sinh — nên 35% là tham vọng, cần lộ trình nhiều năm.</div></div>`;}
+function initBai2(){const b=R.bai2;const xn=['Hạ tầng','AI','Nhân lực','R&D'];
+mkChart('c2_alloc',{type:'bar',data:{labels:xn,datasets:[{data:b.x,backgroundColor:[COL.blue,COL.teal,COL.gold,COL.brand],borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'ngh.tỷ VND'}}}}});
+mkChart('c2_sens',{type:'line',data:{labels:b.sens_B,datasets:[{label:'Z*',data:b.sens_Z,borderColor:COL.brand,backgroundColor:'rgba(45,212,191,.1)',borderWidth:3,fill:true,tension:0,pointRadius:5,pointBackgroundColor:'#fff',pointBorderColor:COL.brand,pointBorderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'Z* (ngh.tỷ)'}},x:{title:{display:true,text:'Ngân sách B (ngh.tỷ)'}}}}});}
+
+// ============ BÀI 3 ============
+function renderBai3(){const b=R.bai3;
+const rows=b.ranking.map(([n,p],i)=>`<tr><td>${i+1}. ${n}</td><td class="mono">${fmt(p,4)}</td></tr>`).join('');
+const ncols=['Tăng trg','Năng suất','Lan tỏa','Xuất khẩu','Việc làm','AI Ready','Risk(đảo)'];
+const nrows=R.bai3_norm.map(r=>`<tr><td>${r[0]}</td>${r.slice(1).map(v=>`<td class="mono">${fmt(v,2)}</td>`).join('')}</tr>`).join('');
+const srows=R.bai3_sens.map(([w,t3])=>`<tr><td class="mono">${fmt(w,2)}</td><td>${t3.join(' · ')}</td></tr>`).join('');
+return `<div class="crumb">Cấp độ Dễ · Bài 3/12</div><h1>Chỉ số ưu tiên ngành Priorityᵢ</h1>
+<p class="sub">Chuẩn hóa min-max 7 chỉ tiêu, gán trọng số và xếp hạng 10 ngành kinh tế Việt Nam.</p>
+<div class="objective">🎯 <b>Mục tiêu:</b> Xác định ngành nào nên ưu tiên chuyển đổi số/AI trước để tạo lan tỏa tối đa.</div>
+${secH('Σ',COL.brand,'Mô hình toán học','Mục 9 · chỉ số tổng hợp có trọng số')}
+${model('Chỉ số ưu tiên ngành & chuẩn hóa min-max',
+ ['Priority_i = a_1 G_i + a_2 P_i + a_3 S_i + a_4 X_i + a_5 E_i + a_6 R_i - a_7\\,Risk_i',
+  '\\tilde{x}_i = \\frac{x_i - \\min x}{\\max x - \\min x}\\;(\\text{benefit}),\\qquad \\tilde{x}_i = \\frac{\\max x - x_i}{\\max x - \\min x}\\;(\\text{Risk})'],
+ 'Các chỉ số: <code>G</code> tăng trưởng · <code>P</code> năng suất · <code>S</code> lan tỏa · <code>X</code> xuất khẩu · <code>E</code> việc làm · <code>R</code> AI readiness · <code>Risk</code> rủi ro tự động hóa (đảo dấu). Trong công thức: <i>benefit</i> = tiêu chí lợi ích (càng cao càng tốt), <i>Risk</i> = tiêu chí chi phí (đảo dấu). Trọng số mặc định a=(0,15; 0,15; 0,20; 0,15; 0,10; 0,20; 0,15).',
+ [['0\\le\\tilde{x}_i\\le1','mọi chỉ số về thang [0,1]'],
+  ['\\textstyle\\sum a_k = 1','trọng số chuẩn hóa']])}
+${code('bai3','Chuẩn hóa min-max (đảo dấu Risk) & xếp hạng Priority')}
+
+${secH('1',COL.teal,'Ma trận chuẩn hóa min-max','Câu 3.4.1 · Risk đã đảo dấu')}
+<div class="tbl"><table><thead><tr><th>Ngành</th>${ncols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${nrows}</tbody></table></div>
+<div class="note">Mỗi cột đưa về thang [0,1]: <b>1</b> = tốt nhất. Risk được đảo dấu nên giá trị cao = rủi ro thấp. CNTT đạt 1,0 ở Lan tỏa &amp; AI Readiness; Khai khoáng đạt 1,0 ở Năng suất (do tài nguyên).</div>
+
+${secH('2',COL.green,'Xếp hạng ưu tiên','Câu 3.4.2 · trọng số mặc định')}
+<div class="stats">${stat('#1',b.ranking[0][0].split(' ')[0],fmt(b.ranking[0][1],3),COL.green)}${stat('#2',b.ranking[1][0].split('-')[0],fmt(b.ranking[1][1],3),COL.blue)}${stat('#3',b.ranking[2][0].split('-')[0],fmt(b.ranking[2][1],3),COL.gold)}${stat('Thấp nhất',b.ranking[9][0].split('-')[0],fmt(b.ranking[9][1],3),COL.red)}</div>
+<div class="grid2"><div class="chart-card"><h4>Priority 10 ngành</h4><div class="cbox" style="height:360px"><canvas id="c3_rank"></canvas></div></div>
+<div class="tbl" style="align-self:start"><table><thead><tr><th>Ngành</th><th>Priority</th></tr></thead><tbody>${rows}</tbody></table></div></div>
+
+${secH('3',COL.gold,'Độ nhạy trọng số AI','Câu 3.4.3 · a₆ từ 0,05 → 0,40')}
+<div class="tbl"><table><thead><tr><th>w_AI</th><th>Top-3 ngành ưu tiên</th></tr></thead><tbody>${srows}</tbody></table></div>
+${check('Top-3 <b>ổn định</b> qua mọi mức w_AI: CN chế biến, CNTT-TT, Tài chính-Ngân hàng — kết quả bền vững, không nhạy với trọng số AI. Đây là kiểm tra robustness quan trọng trước khi khuyến nghị chính sách.')}
+
+${secH('4',COL.purple,'So sánh 2 bộ trọng số','Câu 3.4.4')}
+<div class="grid2"><div class="panel"><b>Định hướng tăng trưởng</b><div class="note" style="margin-top:8px">Ưu tiên tăng trưởng, năng suất, xuất khẩu.<br>Top-3: ${b.growth_top3.join(' · ')}</div></div>
+<div class="panel"><b>Định hướng bao trùm</b><div class="note" style="margin-top:8px">Ưu tiên việc làm, lan tỏa, giảm rủi ro.<br>Top-3: ${b.inclusive_top3.join(' · ')}</div></div></div>
+<div class="note">Hai bộ trọng số cho top-3 gần giống nhau (cùng CN chế biến, CNTT, Tài chính) nhưng <b>thứ tự khác</b>: bộ bao trùm đẩy các ngành thâm dụng lao động lên — minh họa việc lựa chọn trọng số là một <i>quyết định chính trị</i>, không thuần kỹ thuật.</div>
+
+${secH('💬',COL.soft,'Thảo luận','Câu 3.5')}
+<div class="qa"><div class="q">a) 3 ngành ưu tiên?</div><div class="a">${b.ranking.slice(0,3).map(r=>r[0]).join(', ')} — phù hợp Nghị quyết 57 về đột phá KH-CN, đổi mới sáng tạo &amp; chuyển đổi số.</div></div>
+<div class="qa"><div class="q">b) Vì sao Khai khoáng năng suất cao vẫn cuối bảng?</div><div class="a">Năng suất do tài nguyên (vốn-thâm dụng), không phải số hóa; lại có rủi ro tự động hóa cao nhất (55%), lan tỏa &amp; AI readiness thấp ⇒ Priority thấp.</div></div>
+<div class="qa"><div class="q">c) Ai nên quyết định bộ trọng số?</div><div class="a">Trọng số phản ánh giá trị xã hội ⇒ nên qua quy trình đối thoại công khai/hội đồng chính sách, không chỉ chuyên gia kỹ thuật — để bảo đảm tính chính danh (governance).</div></div>`;}
+function initBai3(){const b=R.bai3;
+const colors=b.ranking.map((_,i)=>i<3?COL.brand:i<6?COL.blue:'#5B6478');
+mkChart('c3_rank',{type:'bar',data:{labels:b.ranking.map(r=>r[0].length>16?r[0].slice(0,15)+'…':r[0]),datasets:[{data:b.ranking.map(r=>r[1]),backgroundColor:colors,borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'Priority'}}}}});}
+
+// ============ BÀI 4 ============
+function renderBai4(){const b=R.bai4;
+const items=['Hạ tầng I','Số hóa D','AI','Nhân lực H'];
+const mrows=b.matrix.map((row,i)=>`<tr><td>${b.region_names[i]}</td>${row.map(v=>`<td class="mono">${fmt(v,0)}</td>`).join('')}<td class="mono win">${fmt(b.region_totals[i],0)}</td></tr>`).join('');
+return `<div class="crumb">Cấp độ Trung bình · Bài 4/12</div><h1>LP phân bổ ngân sách số 6 vùng × 4 hạng mục</h1>
+<p class="sub">Tối đa hóa tăng GDP toàn quốc từ 50 nghìn tỷ, ràng buộc trần/sàn vùng và <b>công bằng số hóa</b> giữa các vùng.</p>
+<div class="objective">🎯 <b>Mục tiêu:</b> Giải LP 24 biến bằng PuLP; phát hiện &amp; xử lý <b>tính bất khả thi</b> của ràng buộc công bằng; định lượng "chi phí của công bằng".</div>
+${secH('Σ',COL.brand,'Mô hình toán học','24 biến (6 vùng × 4 hạng mục) · 5 nhóm ràng buộc')}
+${model('LP phân bổ vùng miền với ràng buộc công bằng',
+ ['\\max\\; Z = \\sum_{r=1}^{6}\\sum_{j=1}^{4} \\beta_{rj}\\, x_{rj}'],
+ '<code>x_{rj}</code> vốn cho vùng r, hạng mục j (ngh.tỷ) · <code>β_{rj}</code> hệ số hiệu quả biên (ma trận 6×4, cao ở ĐNB/ĐBSH cho AI, ở vùng khó cho Hạ tầng &amp; Nhân lực) · <code>D⁰_r</code> mức số hóa nền vùng r · <code>γ</code> hệ số chuyển vốn→điểm số hóa.',
+ [['\\sum_{r,j} x_{rj} \\le 50000','tổng ngân sách'],
+  ['5000 \\le \\sum_j x_{rj} \\le 12000\\;\\forall r','sàn &amp; trần mỗi vùng'],
+  ['\\sum_r x_{rH} \\ge 12000','tổng nhân lực toàn quốc'],
+  ['D^0_r + \\gamma x_{rD} \\le M\\;\\forall r','M = mức số hóa cao nhất'],
+  ['D^0_r + \\gamma x_{rD} \\ge \\lambda M\\;\\forall r','công bằng: vùng thấp ≥ λ·cao nhất']])}
+${code('bai4','Giải LP 24 biến bằng PuLP; kiểm tra khả thi của λ; đo chi phí công bằng')}
+
+${secH('1',COL.gold,'Phát hiện bất khả thi','Câu 4.4.1 · λ=0,70 theo đề bài')}
+${check('Với <b>λ=0,70</b> như đề bài, bài toán <b>VÔ NGHIỆM (Infeasible)</b>. Lý do: Tây Nguyên có D⁰=32 thấp nhất; dù dồn toàn bộ trần 12.000 vào số hóa cũng chỉ đạt D≈56, trong khi 0,70×82 (ĐNB) = 57,4 > 56. Ngưỡng λ khả thi tối đa là <b>λ_max ≈ '+fmt(b.lam_max,3)+'</b>. Đây là một phát hiện quan trọng: ràng buộc công bằng quá chặt sẽ phá vỡ tính khả thi.',true)}
+<div class="note">Cách xử lý: hoặc (i) hạ λ xuống ≤ 0,68; hoặc (ii) nới trần vùng khó; hoặc (iii) tăng γ (hiệu suất vốn→số hóa) cho vùng yếu. Dưới đây dùng <b>λ=0,65</b> để minh họa nghiệm tối ưu khả thi.</div>
+
+${secH('2',COL.green,'Nghiệm tối ưu (λ=0,65)','Câu 4.4.2')}
+<div class="stats">${stat('Z* (công bằng)',fmt(b.Z_eq,0),'ngh.tỷ, λ=0,65',COL.green)}${stat('Z* (không CB)',fmt(b.Z_noeq,0),'không ràng buộc công bằng',COL.blue)}${stat('Chi phí công bằng',fmt(b.cost_equity,0),fmt(100*b.cost_equity/b.Z_noeq,1)+'% GDP mất đi',COL.red)}${stat('λ_max',fmt(b.lam_max,3),'ngưỡng khả thi',COL.gold)}</div>
+<div class="tbl"><table><thead><tr><th>Vùng</th>${items.map(i=>`<th>${i}</th>`).join('')}<th>Tổng</th></tr></thead><tbody>${mrows}</tbody><tfoot><tr><td>Tổng cột</td>${b.col_totals.map(c=>`<td class="mono">${fmt(c,0)}</td>`).join('')}<td class="mono">50.000</td></tr></tfoot></table></div>
+<div class="grid2"><div class="chart-card"><h4>Phân bổ theo vùng</h4><div class="cbox sm"><canvas id="c4_reg"></canvas></div></div>
+<div class="chart-card"><h4>Phân bổ theo hạng mục</h4><div class="cbox sm"><canvas id="c4_item"></canvas></div></div></div>
+
+${secH('3',COL.purple,'Đánh đổi hiệu quả – công bằng','Câu 4.4.3')}
+<div class="note"><b>Chi phí của công bằng = ${fmt(b.cost_equity,0)} ngh.tỷ (${fmt(100*b.cost_equity/b.Z_noeq,1)}%)</b>: đây là phần GDP phải hy sinh để thu hẹp khoảng cách số hóa vùng miền. Khi λ↑ về phía λ_max, chi phí này tăng dần và vọt lên vô hạn (vô nghiệm) khi vượt ngưỡng — minh họa đánh đổi hiệu quả–công bằng kinh điển.</div>
+${secH('💬',COL.soft,'Thảo luận','Câu 4.5')}
+<div class="qa"><div class="q">a) Ràng buộc công bằng có nên giữ?</div><div class="a">Nên, nhưng phải <b>khả thi</b>: chọn λ≈0,60–0,65 thay vì 0,70. Công bằng vùng miền là mục tiêu của Chương trình MTQG phát triển KT-XH vùng đồng bào DTTS &amp; miền núi.</div></div>
+<div class="qa"><div class="q">b) Vùng nào hưởng lợi nhiều nhất?</div><div class="a">Tây Nguyên &amp; ĐBSCL được kéo lên sàn/trần để đạt công bằng; ĐNB &amp; ĐBSH vẫn nhận nhiều cho AI do β cao nhất — phân bổ "kép": hiệu quả ở vùng mạnh, công bằng ở vùng yếu.</div></div>`;}
+function initBai4(){const b=R.bai4;const items=['Hạ tầng','Số hóa','AI','Nhân lực'];
+mkChart('c4_reg',{type:'bar',data:{labels:b.region_names.map(n=>n.length>12?n.slice(0,11)+'…':n),datasets:items.map((it,j)=>({label:it,data:b.matrix.map(r=>r[j]),backgroundColor:[COL.blue,COL.teal,COL.brand,COL.gold][j]}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{x:{stacked:true,ticks:{maxRotation:40,font:{size:10}}},y:{stacked:true,title:{display:true,text:'ngh.tỷ'}}}}});
+mkChart('c4_item',{type:'doughnut',data:{labels:items,datasets:[{data:b.col_totals,backgroundColor:[COL.blue,COL.teal,COL.brand,COL.gold]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right'}},cutout:'58%'}});}
+
+// ============ BÀI 5 ============
+function renderBai5(){const b=R.bai5;
+const drows=b.detail.map(([id,n,c,bn,bc])=>`<tr><td class="mono">P${id}</td><td>${n}</td><td class="mono">${fmt(c,0)}</td><td class="mono">${fmt(bn,0)}</td><td class="mono win">${fmt(bc,2)}</td></tr>`).join('');
+return `<div class="crumb">Cấp độ Trung bình · Bài 5/12</div><h1>MIP chọn danh mục dự án chuyển đổi số</h1>
+<p class="sub">Bài toán knapsack nhị phân: chọn trong 15 dự án quốc gia để tối đa NPV, với ràng buộc ngân sách, loại trừ và tiên quyết.</p>
+<div class="objective">🎯 <b>Mục tiêu:</b> Giải MIP bằng PuLP/CBC; xử lý ràng buộc logic (loại trừ, tiên quyết); phân tích rủi ro &amp; ràng buộc bắt buộc.</div>
+${secH('Σ',COL.brand,'Mô hình toán học','15 biến nhị phân yᵢ ∈ {0,1}')}
+${model('Quy hoạch nguyên nhị phân (MIP)',
+ ['\\max\\; Z = \\sum_{i=1}^{15} B_i\\, y_i,\\qquad y_i \\in \\{0,1\\}'],
+ '<code>yᵢ=1</code> nếu chọn dự án i · <code>Bᵢ</code> lợi ích ròng NPV · <code>Cᵢ</code> chi phí 5 năm · <code>C^{12}_i</code> chi phí năm 1–2.',
+ [['\\sum_i C_i y_i \\le 80000','ngân sách 5 năm'],
+  ['\\sum_i C^{12}_i y_i \\le 40000','ngân sách năm 1–2'],
+  ['y_1 + y_2 \\le 1','loại trừ (2 trung tâm dữ liệu)'],
+  ['y_8 \\le y_{12},\\; y_{13} \\le y_{12}','tiên quyết: cần đào tạo trước'],
+  ['y_4 + y_5 \\ge 1,\\; y_{14} \\ge 1','bắt buộc: chính phủ số &amp; an ninh mạng'],
+  ['7 \\le \\sum_i y_i \\le 11','số lượng dự án']])}
+${code('bai5','Giải MIP bằng PuLP/CBC với ràng buộc loại trừ & tiên quyết')}
+
+${secH('1',COL.green,'Danh mục tối ưu','Câu 5.4.1')}
+<div class="stats">${stat('NPV Z*',fmt(b.Z,0),'ngh.tỷ',COL.green)}${stat('Số dự án',b.selected.length,'trong 7–11',COL.blue)}${stat('Chi phí',fmt(b.cost,0),'/ 80.000 ngân sách',COL.gold)}${stat('B/C danh mục',fmt(b.bc,2),'lợi ích/chi phí',COL.brand)}</div>
+<div class="note">Chọn: ${b.selected.map(i=>'P'+i).join(', ')}. <b>Ngân sách 5 năm KHÔNG phải ràng buộc chặt</b> (chỉ dùng ${fmt(b.cost,0)}/80.000) — ràng buộc thực sự bó là <b>số dự án ≤11</b> và <b>ngân sách năm 1–2 ≤40.000</b>.</div>
+<div class="tbl"><table><thead><tr><th>DA</th><th>Tên (top theo B/C)</th><th>Chi phí</th><th>NPV</th><th>B/C</th></tr></thead><tbody>${drows}</tbody></table></div>
+<div class="chart-card"><h4>NPV vs Chi phí các dự án (chọn = sáng)</h4><div class="cbox"><canvas id="c5_bc"></canvas></div></div>
+
+${secH('2',COL.gold,'Ngân sách tăng 80k→100k','Câu 5.4.2')}
+${check('Tập dự án <b>giữ nguyên</b>, Z* không đổi ('+fmt(b.Z,0)+'): vì ngân sách 5 năm vốn đã dư. Muốn tăng NPV phải nới <b>số dự án</b> hoặc <b>ngân sách năm 1–2</b>, không phải tổng ngân sách. Bài học: xác định đúng ràng buộc đang "chặt" mới ra quyết định hiệu quả.')}
+
+${secH('3',COL.purple,'Bắt buộc 2 dự án nền tảng','Câu 5.4.3 · ép chọn P1 & P3')}
+${check('Khi ép chọn thêm các dự án nền tảng, NPV giảm còn <b>'+fmt(b.force_Z,0)+'</b> (mất '+fmt(b.force_drop,0)+' ngh.tỷ) do phải loại dự án B/C cao hơn để giữ ràng buộc số lượng &amp; ngân sách năm 1–2. Chi phí cơ hội của ưu tiên chính trị.',true)}
+
+${secH('4',COL.red,'Phân tích rủi ro','Câu 5.4.4 · kỳ vọng NPV')}
+<div class="stats">${stat('E[Z] điều chỉnh',fmt(b.exp_EZ,0),'sau chiết khấu rủi ro',COL.red)}${stat('Loại khỏi DM',b.exp_dropped.map(i=>'P'+i).join(','),'do rủi ro cao',COL.gold)}</div>
+<div class="note">Khi nhân lợi ích với xác suất thành công (dự án lớn rủi ro hơn), kỳ vọng NPV giảm còn ${fmt(b.exp_EZ,0)} và danh mục loại bỏ ${b.exp_dropped.map(i=>'P'+i).join(', ')} — các dự án quy mô lớn, rủi ro cao. Quyết định dưới bất định ưu tiên dự án nhỏ, chắc ăn.</div>
+
+${secH('💬',COL.soft,'Thảo luận','Câu 5.5')}
+<div class="qa"><div class="q">a) Ràng buộc nào "chặt"?</div><div class="a">Số dự án ≤11 và ngân sách năm 1–2 ≤40k — chính chúng quyết định danh mục, không phải tổng ngân sách.</div></div>
+<div class="qa"><div class="q">b) Có nên ép dự án nền tảng?</div><div class="a">Tùy giá trị chiến lược: nếu hạ tầng số/an ninh mạng là điều kiện cần cho các dự án khác, chấp nhận mất ${fmt(b.force_drop,0)} NPV là hợp lý (ngoại ứng tích cực chưa tính trong B).</div></div>`;}
+function initBai5(){const b=R.bai5;
+const all=b.detail; // chỉ có top theo B/C; dựng scatter từ detail
+mkChart('c5_bc',{type:'scatter',data:{datasets:[{label:'Dự án (top B/C)',data:all.map(d=>({x:d[2],y:d[3]})),backgroundColor:COL.brand,pointRadius:7,pointHoverRadius:9}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Chi phí '+fmt(c.parsed.x,0)+' · NPV '+fmt(c.parsed.y,0)}}},scales:{x:{title:{display:true,text:'Chi phí (ngh.tỷ)'}},y:{title:{display:true,text:'NPV (ngh.tỷ)'}}}}});}
+
+// ============ BÀI 6 ============
+function renderBai6(){const b=R.bai6;
+const rows=b.region_names.map((n,i)=>`<tr><td>${n}</td><td class="mono">${fmt(b.expert[i],3)}</td><td class="mono">#${b.rank_expert[i]}</td><td class="mono">${fmt(b.entropy[i],3)}</td><td class="mono">#${b.rank_entropy[i]}</td></tr>`).join('');
+const wrows=b.criteria.map((c,i)=>`<tr><td>${c}</td><td class="mono">${fmt(b.entropy_weights[i],3)}</td></tr>`).join('');
+const srows=R.bai6_sens.map(([w,t3])=>`<tr><td class="mono">w=${fmt(w,2)}</td><td>${t3.join(' · ')}</td></tr>`).join('');
+return `<div class="crumb">Cấp độ Trung bình · Bài 6/12</div><h1>TOPSIS xếp hạng 6 vùng kinh tế</h1>
+<p class="sub">Ra quyết định đa tiêu chí (MCDM): xếp hạng mức độ sẵn sàng AI của 6 vùng theo 8 chỉ tiêu, so sánh trọng số chuyên gia vs entropy.</p>
+<div class="objective">🎯 <b>Mục tiêu:</b> Cài đặt TOPSIS đầy đủ (chuẩn hóa vector, lý tưởng ±, hệ số gần gũi); tính trọng số khách quan bằng entropy; phân tích độ nhạy.</div>
+${secH('Σ',COL.brand,'Mô hình toán học','TOPSIS · 6 phương án × 8 tiêu chí')}
+${model('TOPSIS (Technique for Order Preference by Similarity to Ideal Solution)',
+ ['r_{ij} = \\frac{x_{ij}}{\\sqrt{\\sum_i x_{ij}^2}},\\qquad v_{ij} = w_j\\, r_{ij}',
+  'S_i^{+} = \\sqrt{\\sum_j (v_{ij}-v_j^{+})^2},\\quad S_i^{-} = \\sqrt{\\sum_j (v_{ij}-v_j^{-})^2},\\quad C_i^{*} = \\frac{S_i^{-}}{S_i^{+}+S_i^{-}}'],
+ '<code>v⁺</code> giải pháp lý tưởng dương (tốt nhất mỗi tiêu chí) · <code>v⁻</code> lý tưởng âm · <code>C*</code> ∈ [0,1], càng gần 1 càng tốt. Gini là tiêu chí <b>chi phí</b> (đảo cực).',
+ [['\\textstyle\\sum_j w_j = 1','trọng số chuẩn hóa'],
+  ['w_j^{entropy} = \\frac{1-E_j}{\\sum(1-E_k)}','trọng số entropy khách quan']])}
+${code('bai6','TOPSIS + trọng số entropy (chuẩn hóa vector, lý tưởng ±, C*)')}
+
+${secH('1',COL.green,'Xếp hạng theo 2 bộ trọng số','Câu 6.4.1–6.4.2')}
+<div class="stats">${stat('#1 (Chuyên gia)','ĐNB',fmt(Math.max(...b.expert),3),COL.green)}${stat('#1 (Entropy)','ĐBSH',fmt(Math.max(...b.entropy),3),COL.blue)}${stat('Khác biệt','Top-1 đổi','chuyên gia ≠ khách quan',COL.gold)}</div>
+<div class="tbl"><table><thead><tr><th>Vùng</th><th>C* chuyên gia</th><th>Hạng</th><th>C* entropy</th><th>Hạng</th></tr></thead><tbody>${rows}</tbody></table></div>
+<div class="chart-card"><h4>So sánh hệ số gần gũi C* hai phương pháp</h4><div class="cbox"><canvas id="c6_cmp"></canvas></div></div>
+${check('Top-1 <b>đổi ngôi</b>: trọng số chuyên gia (nhấn AI &amp; FDI) ⇒ Đông Nam Bộ #1; entropy (khách quan, nhấn chỉ tiêu phân tán mạnh) ⇒ ĐB sông Hồng #1. Cho thấy kết quả MCDM <b>nhạy với cách chọn trọng số</b>.',true)}
+
+${secH('2',COL.teal,'Trọng số entropy','Câu 6.4.2 · khách quan từ dữ liệu')}
+<div class="grid2"><div class="tbl" style="align-self:start"><table><thead><tr><th>Tiêu chí</th><th>Trọng số entropy</th></tr></thead><tbody>${wrows}</tbody></table></div>
+<div class="chart-card"><h4>Trọng số entropy theo tiêu chí</h4><div class="cbox sm"><canvas id="c6_w"></canvas></div></div></div>
+
+${secH('3',COL.purple,'Độ nhạy trọng số AI','Câu 6.4.3')}
+<div class="tbl"><table><thead><tr><th>Trọng số AI</th><th>Top-3 vùng</th></tr></thead><tbody>${srows}</tbody></table></div>
+${secH('💬',COL.soft,'Thảo luận','Câu 6.5')}
+<div class="qa"><div class="q">a) Nên dùng trọng số nào?</div><div class="a">Kết hợp: entropy bảo đảm khách quan từ dữ liệu; chuyên gia phản ánh ưu tiên chính sách. Có thể lấy trung bình hai bộ (trọng số "lai") để cân bằng.</div></div>
+<div class="qa"><div class="q">b) ĐBSH vượt ĐNB nói lên điều gì?</div><div class="a">Theo dữ liệu khách quan, ĐBSH (Hà Nội + vùng phụ cận) đồng đều hơn ở nhiều chỉ tiêu; ĐNB mạnh FDI/AI nhưng bất bình đẳng (Gini) cao hơn ⇒ tụt khi entropy nhấn các chỉ tiêu phân tán.</div></div>`;}
+function initBai6(){const b=R.bai6;const short=['TDMN','ĐBSH','BTB','TN','ĐNB','ĐBSCL'];
+mkChart('c6_cmp',{type:'bar',data:{labels:short,datasets:[{label:'Chuyên gia',data:b.expert,backgroundColor:'rgba(74,222,128,.75)',borderRadius:4},{label:'Entropy',data:b.entropy,backgroundColor:'rgba(96,165,250,.75)',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{title:{display:true,text:'C* (gần gũi)'},max:1}}}});
+mkChart('c6_w',{type:'bar',data:{labels:b.criteria,datasets:[{data:b.entropy_weights,backgroundColor:COL.teal,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'trọng số'}}}}});}
+
+// ============ BÀI 7 ============
+function renderBai7(){const b=R.bai7,c=b.compromise,mg=b.maxgrowth,opp=R.bai7_opp;
+return `<div class="crumb">Cấp độ Khá khó · Bài 7/12</div><h1>NSGA-II tối ưu đa mục tiêu phân bổ số</h1>
+<p class="sub">Tìm mặt Pareto cân bằng 4 mục tiêu xung đột: tăng GDP, giảm bất bình đẳng vùng, giảm phát thải, giảm rủi ro AI/dữ liệu.</p>
+<div class="objective">🎯 <b>Mục tiêu:</b> Chạy NSGA-II (pymoo) trên bài toán 24 biến/4 mục tiêu; trích mặt Pareto; vẽ scatter 3D &amp; trục song song; chọn nghiệm thỏa hiệp bằng TOPSIS; phân tích chi phí cơ hội.</div>
+${secH('Σ',COL.brand,'Mô hình toán học','4 mục tiêu · 24 biến · 14 ràng buộc')}
+${model('Tối ưu đa mục tiêu (MOO) — tìm tập Pareto',
+ ['\\min\\; \\mathbf{F}(x) = \\big(-f_1(x),\\, f_2(x),\\, f_3(x),\\, f_4(x)\\big)'],
+ '<code>f₁</code> tăng GDP (tối đa) · <code>f₂</code> bất bình đẳng vùng = độ lệch tuyệt đối TB (tối thiểu) · <code>f₃</code> phát thải CO₂ (tối thiểu) · <code>f₄</code> rủi ro ròng = rủi ro AI − giảm thiểu nhờ H (tối thiểu). Nghiệm x* <b>Pareto-tối ưu</b> nếu không thể cải thiện một mục tiêu mà không làm xấu mục tiêu khác.',
+ [['f_1 = \\sum_{r,j}\\beta_{rj}x_{rj}','tăng GDP'],
+  ['f_2 = \\tfrac{1}{6}\\sum_r |T_r - \\bar{T}|','bất bình đẳng (MAD≈Gini)'],
+  ['f_3 = \\sum_r e_r (x_{rI}+x_{rAI})','phát thải'],
+  ['f_4 = \\sum_r \\rho_r x_{rAI} - \\sigma_r x_{rH}','rủi ro ròng'],
+  ['x \\in \\Omega','tập khả thi: ràng buộc C1–C6 như Bài 4']])}
+${code('bai7','NSGA-II (pymoo, pop=100, gen=200, seed=42) + chọn thỏa hiệp TOPSIS')}
+
+${secH('1',COL.green,'Cài đặt & mặt Pareto','Câu 7.4.1 · pymoo ElementwiseProblem, pop=100, gen=200')}
+<div class="stats">${stat('|Pareto|',b.n_pareto,'nghiệm không trội',COL.green)}${stat('f₁ khoảng',fmt(b.f1_range[0]/1000,1)+'–'+fmt(b.f1_range[1]/1000,1)+'k','tăng GDP',COL.blue)}${stat('Thỏa hiệp C*',fmt(c.C,3),'TOPSIS chọn',COL.brand)}${stat('Max tăng trưởng','f₁='+fmt(mg.f1/1000,1)+'k','đánh đổi rủi ro cao',COL.gold)}</div>
+${check('NSGA-II hội tụ về <b>'+b.n_pareto+' nghiệm không trội</b> sau 200 thế hệ — đây không phải một nghiệm tối ưu duy nhất mà là cả một <b>mặt đánh đổi</b> để nhà hoạch định lựa chọn.')}
+
+${secH('2',COL.blue,'Scatter 3D & trục song song','Câu 7.4.2 · f₁,f₂,f₃ + parallel coordinates')}
+<div class="grid2"><div class="chart-card"><h4>Pareto 3D: GDP (f₁) – Bất bình đẳng (f₂) – Phát thải (f₃)</h4><p class="cap">Trục X=f₁, Y=f₂; <b>kích thước &amp; màu điểm = f₃ phát thải</b> (nhỏ/xanh = thấp). ★ = nghiệm thỏa hiệp.</p><div class="cbox"><canvas id="c7_3d"></canvas></div></div>
+<div class="chart-card"><h4>Pareto: GDP (f₁) vs Phát thải (f₃)</h4><p class="cap">Mặt chiếu phẳng bổ trợ cho góc nhìn 3D ở trên.</p><div class="cbox"><canvas id="c7_p13"></canvas></div></div></div>
+<div class="chart-card"><h4>Biểu đồ trục song song (parallel coordinates) — 4 mục tiêu chuẩn hóa [0,1]</h4><p class="cap">Mỗi đường = 1 nghiệm Pareto; đường vàng đậm = nghiệm thỏa hiệp. Đường cắt chéo nhau ⇒ các mục tiêu xung đột.</p><div class="cbox"><canvas id="c7_par"></canvas></div></div>
+
+${secH('3',COL.purple,'Nghiệm thỏa hiệp TOPSIS','Câu 7.4.3 · trọng số (0,40; 0,25; 0,20; 0,15)')}
+<div class="tbl"><table><thead><tr><th>Mục tiêu</th><th>Thỏa hiệp (C*)</th><th>Max tăng trưởng</th></tr></thead><tbody>
+<tr><td>f₁ Tăng GDP ↑</td><td class="mono win">${fmt(c.f1,0)}</td><td class="mono">${fmt(mg.f1,0)}</td></tr>
+<tr><td>f₂ Bất bình đẳng ↓</td><td class="mono win">${fmt(c.f2,1)}</td><td class="mono bad">${fmt(mg.f2,1)}</td></tr>
+<tr><td>f₃ Phát thải ↓</td><td class="mono win">${fmt(c.f3,0)}</td><td class="mono bad">${fmt(mg.f3,0)}</td></tr>
+<tr><td>f₄ Rủi ro ròng ↓</td><td class="mono">${fmt(c.f4,0)}</td><td class="mono">${fmt(mg.f4,0)}</td></tr>
+</tbody></table></div>
+${check('Áp TOPSIS với trọng số ưu tiên chính sách (40% tăng trưởng, 25% bao trùm, 20% môi trường, 15% an ninh) ⇒ chọn 1 nghiệm thỏa hiệp duy nhất có C*='+fmt(c.C,3)+'.')}
+
+${secH('4',COL.red,'Chi phí cơ hội của tăng trưởng','Câu 7.4.4 · nghiệm max-growth hi sinh bao nhiêu?')}
+<div class="stats">${stat('+Tăng GDP',fmt(opp.growth_gain_pct,1)+'%','max-growth so với thỏa hiệp',COL.green)}${stat('−Bao trùm',fmt(opp.equity_worse_pct,0)+'%','bất bình đẳng xấu đi',COL.red)}${stat('−Môi trường',fmt(opp.emis_worse_pct,0)+'%','phát thải tăng',COL.gold)}</div>
+${check('Để được thêm chỉ <b>~'+fmt(opp.growth_gain_pct,0)+'% GDP</b>, phương án "tăng trưởng tối đa" làm bất bình đẳng xấu đi <b>'+fmt(opp.equity_worse_pct,0)+'%</b> và phát thải tăng <b>'+fmt(opp.emis_worse_pct,0)+'%</b>. Chi phí cơ hội rất lớn ⇒ nghiệm thỏa hiệp hợp lý hơn nhiều về mặt chính sách.',true)}
+
+${secH('💬',COL.soft,'Thảo luận chính sách','Câu 7.5')}
+<div class="qa"><div class="q">a) Đánh đổi tăng trưởng – bao trùm có rõ ràng không?</div><div class="a">Rất rõ: trên mặt Pareto, để tăng f₁ phải hi sinh f₂ theo tỷ lệ phi tuyến (đường biên cong). Phản ánh cơ cấu kinh tế VN còn lệch về các cực tăng trưởng (ĐNB, ĐBSH) so với vùng khó (Tây Nguyên, miền núi).</div></div>
+<div class="qa"><div class="q">b) Trọng số (0,40;0,25;0,20;0,15) có đúng ưu tiên VN (Đại hội XIII)?</div><div class="a">Khá phù hợp định hướng "tăng trưởng nhanh &amp; bền vững", nhưng để bám sát COP26 &amp; QĐ 127/QĐ-TTg nên nâng trọng số môi trường f₃ lên ~0,25–0,30 (giảm bớt f₁), đẩy nghiệm về phía xanh hơn.</div></div>
+<div class="qa"><div class="q">c) Vai trò NSGA-II so với LP đơn mục tiêu? Có thay quyết định chính trị?</div><div class="a">NSGA-II phơi bày <b>toàn bộ</b> mặt đánh đổi thay vì 1 nghiệm; nó là <b>công cụ hỗ trợ</b>, không thay thế quyết định chính trị — việc chọn điểm nào trên mặt Pareto vẫn là lựa chọn giá trị, cần thảo luận thể chế.</div></div>`;}
+function initBai7(){const b=R.bai7,pts=R.bai7_pts,c=b.compromise;
+const f3=pts.map(p=>p[2]);
+const f3min=Math.min(...f3),f3max=Math.max(...f3);
+const heat=v=>{const t=(v-f3min)/(f3max-f3min+1e-9);const r=Math.round(96+t*(251-96)),g=Math.round(165-t*(165-113)),bl=Math.round(250-t*(250-133));return `rgba(${r},${g},${bl},.8)`;};
+const rad=v=>4+12*(v-f3min)/(f3max-f3min+1e-9);   // bán kính bong bóng ~ f3
+// "3D": bubble chart, X=f1, Y=f2, size&màu = f3 (chiều thứ ba)
+mkChart('c7_3d',{type:'bubble',data:{datasets:[
+ {label:'Pareto',data:pts.map(p=>({x:p[0],y:p[1],r:rad(p[2])})),backgroundColor:f3.map(heat),borderColor:'rgba(255,255,255,.2)',borderWidth:1},
+ {label:'Thỏa hiệp ★',data:[{x:c.f1,y:c.f2,r:14}],backgroundColor:COL.gold,borderColor:'#fff',borderWidth:2}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'},tooltip:{callbacks:{label:ctx=>'f₁='+fmt(ctx.parsed.x,0)+' f₂='+fmt(ctx.parsed.y,0)}}},scales:{x:{title:{display:true,text:'f₁ Tăng GDP'}},y:{title:{display:true,text:'f₂ Bất bình đẳng'}}}}});
+mkChart('c7_p13',{type:'scatter',data:{datasets:[{label:'Pareto',data:pts.map(p=>({x:p[0],y:p[2]})),backgroundColor:f3.map(heat),pointRadius:5},{label:'Thỏa hiệp ★',data:[{x:c.f1,y:c.f3}],backgroundColor:COL.gold,pointStyle:'star',pointRadius:16}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{x:{title:{display:true,text:'f₁ Tăng GDP'}},y:{title:{display:true,text:'f₃ Phát thải'}}}}});
+const para=R.bai7_para;const labels=['f₁ GDP','f₂ Bất BĐ','f₃ Phát thải','f₄ Rủi ro'];
+mkChart('c7_par',{type:'line',data:{labels,datasets:[{label:'Nghiệm thỏa hiệp',data:para.comp_para,borderColor:COL.gold,backgroundColor:'rgba(251,191,36,.15)',borderWidth:3,fill:true,pointRadius:5,tension:0},...para.parallel.slice(0,18).map(r=>({label:'',data:r,borderColor:'rgba(148,163,184,.18)',borderWidth:1,pointRadius:0,tension:0}))]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'giá trị chuẩn hóa [0,1]'},min:0,max:1}}}});}
+
+// ============ BÀI 8 ============
+function renderBai8(){const b=R.bai8;
+return `<div class="crumb">Cấp độ Khá khó · Bài 8/12</div><h1>Tối ưu động phân bổ đầu tư 10 năm</h1>
+<p class="sub">Bài toán điều khiển tối ưu liên thời gian 2026–2035: chọn quỹ đạo đầu tư tối đa phúc lợi xã hội chiết khấu, với TFP nội sinh.</p>
+<div class="objective">🎯 <b>Mục tiêu:</b> Giải DP/điều khiển tối ưu bằng scipy.SLSQP; xác định quỹ đạo đầu tư front-loaded hay back-loaded; phân tích vai trò hệ số chiết khấu ρ.</div>
+${secH('Σ',COL.brand,'Mô hình toán học','10 giai đoạn · biến trạng thái K,D,AI,H · TFP nội sinh')}
+${model('Điều khiển tối ưu / quy hoạch động (liên thời gian)',
+ ['\\max_{\\{s_t\\}}\\; W = \\sum_{t=0}^{9} \\rho^{t}\\,\\ln C_t,\\qquad C_t = \\big(1-\\textstyle\\sum_k s_{kt}\\big)Y_t',
+  'K_{t+1}=(1-\\delta_K)K_t + s_{Kt}Y_t,\\quad A_{t+1}=A_t\\big(1+\\phi_1\\tfrac{D_t}{100}+\\phi_2\\tfrac{AI_t}{100}+\\phi_3\\tfrac{H_t}{100}\\big)'],
+ '<code>s_{kt}</code> tỷ lệ đầu tư cho yếu tố k tại năm t · <code>ρ=0,97</code> hệ số chiết khấu · phúc lợi U(C)=ln C. <b>TFP nội sinh</b>: số hóa, AI &amp; nhân lực làm A tăng theo thời gian (cơ chế tăng trưởng nội sinh).',
+ [['\\textstyle\\sum_k s_{kt} \\le 0{,}42\\;\\forall t','trần đầu tư/GDP mỗi năm'],
+  ['\\text{stock}_T \\ge \\text{stock}_0','ràng buộc bền vững (không vắt kiệt vốn)'],
+  ['0 \\le s_{kt} \\le 0{,}38','biên từng khoản']])}
+${code('bai8','Điều khiển tối ưu 10 năm với TFP nội sinh (scipy.SLSQP)')}
+
+${secH('1',COL.green,'Quỹ đạo tối ưu','Câu 8.4.1')}
+<div class="stats">${stat('Phúc lợi W*',fmt(b.W,2),'ρ=0,97',COL.green)}${stat('GDP 2026→2035',fmt(b.Y[0],0)+'→'+fmt(b.opt_Y2035,0),'ngh.tỷ',COL.blue)}${stat('Đầu tư đầu kỳ',fmt(b.invrate[0],1)+'%','năm 2026',COL.gold)}${stat('Đầu tư cuối kỳ',fmt(b.invrate[9],1)+'%','năm 2035',COL.teal)}</div>
+<div class="grid2"><div class="chart-card"><h4>Tỷ lệ đầu tư/GDP theo năm</h4><p class="cap">Front-loaded: đầu tư cao đầu kỳ (${fmt(b.invrate[0],1)}%) rồi giảm dần.</p><div class="cbox sm"><canvas id="c8_inv"></canvas></div></div>
+<div class="chart-card"><h4>Quỹ đạo GDP &amp; tiêu dùng</h4><div class="cbox sm"><canvas id="c8_gdp"></canvas></div></div></div>
+${check('Quỹ đạo đầu tư <b>FRONT-LOADED</b>: '+fmt(b.invrate[0],1)+'% (2026) giảm còn '+fmt(b.invrate[9],1)+'% (2035). Trực giác kinh tế: đầu tư sớm để vốn &amp; TFP "cộng dồn" (compounding) — mỗi đồng đầu tư sớm sinh lợi qua nhiều năm hơn. Phúc lợi tối ưu W*='+fmt(b.W,2)+' ≥ chiến lược đầu tư đều ('+fmt(b.W_even,2)+').')}
+
+${secH('2',COL.purple,'Cơ cấu đầu tư dịch chuyển','Câu 8.4.2 · tỷ lệ AI/H không cố định')}
+<div class="chart-card"><h4>Cơ cấu đầu tư theo yếu tố qua thời gian (% GDP)</h4><p class="cap">Vốn vật chất sớm → Số hóa &amp; AI giữa kỳ → Nhân lực cuối kỳ.</p><div class="cbox"><canvas id="c8_share"></canvas></div></div>
+${check('Tỷ lệ đầu tư AI/H <b>KHÔNG ổn định</b>: vốn vật chất K dồn đầu kỳ; số hóa D &amp; AI tăng mạnh giữa kỳ; nhân lực H vọt lên cuối kỳ (do H không khấu hao &amp; nên đầu tư khi GDP đã lớn). Mô hình tự "xếp lịch" tối ưu giữa các yếu tố.')}
+
+${secH('3',COL.gold,'Vai trò chiết khấu ρ','Câu 8.4.3 · ρ=0,90 vs 0,97')}
+<div class="stats">${stat('W (ρ=0,97)',fmt(b.W,2),'kiên nhẫn',COL.green)}${stat('W (ρ=0,90)',fmt(b.W90,2),'thiếu kiên nhẫn',COL.red)}</div>
+<div class="note">ρ thấp (0,90) ⇒ trọng số tương lai giảm ⇒ ưu tiên tiêu dùng hiện tại, <b>đầu tư ít hơn</b>, phúc lợi tích lũy thấp hơn. Hàm ý: chính sách "ngắn hạn" (chiết khấu cao) làm giảm phúc lợi dài hạn — lý lẽ cho tầm nhìn dài hạn trong quy hoạch quốc gia.</div>
+
+${secH('4',COL.red,'Sốc bất lợi giữa kỳ','Câu 8.4.4 · sốc −8% GDP năm 2028')}
+<div class="chart-card"><h4>GDP: kịch bản gốc vs có sốc 2028</h4><div class="cbox sm"><canvas id="c8_shock"></canvas></div></div>
+<div class="note">Sốc giữa kỳ làm GDP rớt nhưng nhờ vốn &amp; TFP đã tích lũy đầu kỳ, nền kinh tế phục hồi về quỹ đạo — củng cố thêm lý lẽ đầu tư front-loaded để tạo "đệm" chống sốc.</div>
+
+${secH('💬',COL.soft,'Thảo luận','Câu 8.5')}
+<div class="qa"><div class="q">a) Front-loaded hay back-loaded? Vì sao?</div><div class="a"><b>Front-loaded</b> (${fmt(b.invrate[0],1)}%→${fmt(b.invrate[9],1)}%). Đầu tư sớm sinh lợi cộng dồn qua TFP nội sinh; "thời gian là tiền" trong tăng trưởng.</div></div>
+<div class="qa"><div class="q">b) Tỷ lệ AI/H có cố định?</div><div class="a">Không. Vốn vật chất sớm, AI/số hóa giữa kỳ, nhân lực cuối kỳ — cơ cấu tối ưu thay đổi theo trạng thái nền kinh tế.</div></div>`;}
+function initBai8(){const b=R.bai8,yr=b.years;
+mkChart('c8_inv',{type:'bar',data:{labels:yr,datasets:[{label:'Đầu tư/GDP %',data:b.invrate,backgroundColor:b.invrate.map((v,i)=>i<5?'rgba(74,222,128,.8)':'rgba(96,165,250,.7)'),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'% GDP'}}}}});
+mkChart('c8_gdp',{type:'line',data:{labels:yr,datasets:[{label:'GDP',data:b.Y,borderColor:COL.brand,borderWidth:3,tension:.3,pointRadius:3,yAxisID:'y'},{label:'Tiêu dùng C',data:b.C,borderColor:COL.gold,borderWidth:2,borderDash:[5,3],tension:.3,pointRadius:3,yAxisID:'y'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{title:{display:true,text:'ngh.tỷ'}}}}});
+mkChart('c8_share',{type:'bar',data:{labels:yr,datasets:[{label:'Vốn K',data:b.shareK,backgroundColor:COL.blue},{label:'Số hóa D',data:b.shareD,backgroundColor:COL.teal},{label:'AI',data:b.shareAI,backgroundColor:COL.brand},{label:'Nhân lực H',data:b.shareH,backgroundColor:COL.gold}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'% GDP đầu tư'}}}}});
+mkChart('c8_shock',{type:'line',data:{labels:R.bai8_shock.years,datasets:[{label:'Gốc',data:R.bai8_shock.base,borderColor:COL.brand,borderWidth:3,tension:.3,pointRadius:3},{label:'Có sốc 2028',data:R.bai8_shock.shock,borderColor:COL.red,borderWidth:3,borderDash:[6,4],tension:.3,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{title:{display:true,text:'GDP (ngh.tỷ)'}}}}});}
+
+// ============ BÀI 9 ============
+function renderBai9(){const b=R.bai9_full,th=R.bai9_thresh;
+const rows=b.rows.map(([s,xA,xH,net])=>`<tr><td>${s}</td><td class="mono">${fmt(xA,0)}</td><td class="mono">${fmt(xH,0)}</td><td class="mono win">${fmt(net,0)}</td></tr>`).join('');
+return `<div class="crumb">Cấp độ Khá khó · Bài 9/12</div><h1>Tác động AI tới lao động — tối ưu NetJob</h1>
+<p class="sub">Phân bổ đầu tư AI và đào tạo lại (H) trên 8 ngành để tối đa việc làm ròng, bảo đảm không ngành nào mất việc ròng.</p>
+<div class="objective">🎯 <b>Mục tiêu:</b> Giải LP cân bằng tạo việc – mất việc do AI; ràng buộc năng lực đào tạo lại; tìm ngưỡng đầu tư AI an toàn.</div>
+${secH('Σ',COL.brand,'Mô hình toán học','16 biến (8 ngành × {AI, H}) · ràng buộc NetJob ≥ 0')}
+${model('LP tối đa việc làm ròng (NetJob)',
+ ['\\max\\; \\text{Net} = \\sum_{i=1}^{8}\\big(a_i x^{AI}_i + b_i x^{H}_i - c_i\\,\\text{risk}_i\\, x^{AI}_i\\big)'],
+ '<code>x^{AI}_i</code> đầu tư AI ngành i · <code>x^{H}_i</code> đầu tư đào tạo lại · <code>aᵢ</code> việc mới/tỷ AI · <code>bᵢ</code> việc nâng cấp/tỷ H · <code>cᵢ·riskᵢ</code> việc bị thay thế. NetJob ròng = tạo mới + nâng cấp − thay thế.',
+ [['\\textstyle\\sum_i (x^{AI}_i + x^{H}_i) \\le 30000','tổng ngân sách'],
+  ['\\text{Net}_i \\ge 0\\;\\forall i','không ngành nào mất việc ròng'],
+  ['c_i\\,\\text{risk}_i\\,x^{AI}_i \\le d_i x^{H}_i','người bị thay thế ≤ năng lực đào tạo lại']])}
+${code('bai9','LP tối đa việc làm ròng với ràng buộc đào tạo lại (cvxpy/PuLP)')}
+
+${secH('1',COL.green,'Phân bổ tối ưu','Câu 9.4.1')}
+<div class="stats">${stat('NetJob tối đa',fmt(b.total_net/1000,0)+'k','≈'+fmt(b.total_net/1e6,2)+' triệu việc',COL.green)}${stat('Ngân sách',fmt(30000,0),'ngh.tỷ',COL.blue)}${stat('Mọi ngành','Net ≥ 0','ràng buộc thỏa',COL.brand)}</div>
+<div class="tbl"><table><thead><tr><th>Ngành</th><th>Đầu tư AI</th><th>Đào tạo H</th><th>Việc ròng</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td>Tổng</td><td>—</td><td>—</td><td class="mono">${fmt(b.total_net,0)}</td></tr></tfoot></table></div>
+<div class="chart-card"><h4>Việc làm ròng theo ngành</h4><div class="cbox"><canvas id="c9_net"></canvas></div></div>
+
+${secH('2',COL.gold,'Ngưỡng đào tạo tối thiểu (ngành CN chế biến)','Câu 9.4.2')}
+${check('Ngành <b>CN chế biến-chế tạo</b>: hệ số tạo việc a₁=32,5 &gt; thay thế c₁·risk=62,4×0,42=26,2, nên hệ số ròng (c₁·risk − a₁) = '+fmt(th.coef,2)+' &lt; 0 ⇒ <b>net-dương ngay cả khi đầu tư AI tối đa và x_H = 0</b>. Vậy ngưỡng đào tạo tối thiểu để Net₂≥0 là <b>0</b>; mỗi tỷ đầu tư AI tạo ròng '+fmt(th.net_per_AI_only,2)+' việc/tỷ kể cả khi chưa đào tạo. Kết luận: với cơ cấu hệ số này, AI <i>không</i> gây mất việc ròng trong chế tạo (ràng buộc C3 vẫn cần để tài trợ chi phí đào tạo người bị dịch chuyển).')}
+
+${secH('3',COL.red,'Luồng dịch chuyển lao động','Câu 9.4.3 · nhóm dễ tổn thương (ngành 1, 3, 4)')}
+<div class="note">Để luồng lao động có ý nghĩa diễn giải, mô hình bổ sung <b>sàn phân bổ theo tỷ trọng lao động</b> (mỗi ngành nhận tối thiểu theo quy mô việc làm — nguyên tắc bao trùm). Khi đó tổng NetJob = ${fmt(b.total_net,0)} (~${fmt(b.total_net/1e6,2)} triệu việc).</div>
+<div class="chart-card"><h4>Luồng việc làm ngành dễ tổn thương (Nông-Lâm, Xây dựng, Bán buôn-bán lẻ)</h4><p class="cap">Việc mới (AI) + Nâng cấp (đào tạo) − Dịch chuyển (tự động hóa) = Ròng. Các ngành này được "lái" sang đầu tư H ⇒ nâng cấp việc làm, gần như không dịch chuyển.</p><div class="cbox"><canvas id="c9_flow"></canvas></div></div>
+${check('Mô hình ưu tiên đổ ngân sách <b>đào tạo lại (H)</b> vào ba ngành dễ tổn thương thay vì AI — vì hệ số tạo việc AI của chúng thấp còn rủi ro dịch chuyển cao. Kết quả: luồng "Nâng cấp" chiếm ưu thế, dòng "Dịch chuyển" ≈ 0 — đúng tinh thần chuyển đổi công bằng.')}
+
+${secH('4',COL.purple,'Ràng buộc ≤5% lao động','Câu 9.4.4 · Displacedᵢ ≤ 0,05·Lᵢ')}
+<div class="stats">${stat('Trạng thái',R.bai9_5pct.feasible?'Khả thi':'Vô nghiệm',R.bai9_5pct.feasible?'vẫn giải được':'mâu thuẫn',R.bai9_5pct.feasible?COL.green:COL.red)}${stat('NetJob (≤5%)',R.bai9_5pct.total?fmt(R.bai9_5pct.total/1000,0)+'k':'—','sau ràng buộc',COL.blue)}${stat('So với gốc',R.bai9_5pct.total?'−'+fmt((b.total_net-R.bai9_5pct.total)/1000,0)+'k':'—','việc làm',COL.gold)}</div>
+${check('Thêm ràng buộc "không ngành nào mất quá 5% lao động" — bài toán <b>vẫn khả thi</b>, NetJob chỉ giảm nhẹ còn '+(R.bai9_5pct.total?fmt(R.bai9_5pct.total,0):'—')+'. Lý do: nghiệm tối ưu vốn đã hạn chế dịch chuyển (dồn vốn H vào ngành rủi ro), nên trần 5% chỉ ràng buộc nhẹ. Đây là một "ràng buộc an sinh" rẻ về mặt hiệu quả — nên đưa vào chính sách.')}
+
+${secH('💬',COL.soft,'Thảo luận chính sách','Câu 9.5')}
+<div class="qa"><div class="q">a) Ngành nào cần đào tạo lại nhiều nhất? Có khớp thực tế VN?</div><div class="a">Các ngành rủi ro cao &amp; đông lao động: <b>Bán buôn-bán lẻ, CN chế biến, Nông-Lâm</b>. Khớp thực tế — đây là các nhóm dễ bị tự động hóa (kho vận, dây chuyền, sơ chế) mà ILO Vietnam 2024 cảnh báo.</div></div>
+<div class="qa"><div class="q">b) Chiến lược cho Tài chính-Ngân hàng (rủi ro 52% nhưng a₁ cao)?</div><div class="a">Mô hình khuyến nghị <b>đầu tư AI mạnh kèm đào tạo song song</b>: hệ số tạo việc mới a₁=45,8 rất cao bù cho rủi ro, miễn là x_H đủ để giữ Displaced ≤ năng lực đào tạo (C3). Đây là ngành "AI dẫn dắt" điển hình.</div></div>
+<div class="qa"><div class="q">c) Có nên đổ x_AI vào Nông-Lâm-Thủy sản (a₁ thấp 8,5)?</div><div class="a">Không nên đầu tư AI nhiều: a₁ thấp mà lao động dịch chuyển lớn. Mô hình lái ngân sách sang <b>x_H (đào tạo, nâng cấp)</b> — phù hợp định hướng "nông nghiệp công nghệ cao" nâng kỹ năng thay vì thay thế lao động.</div></div>
+<div class="qa"><div class="q">d) "Tốc độ tự động hóa ≤ năng lực đào tạo lại" là ràng buộc nào?</div><div class="a">Chính là <b>C3: cᵢ·riskᵢ·x_AIᵢ ≤ dᵢ·x_Hᵢ</b> (Displaced ≤ RetrainingCapacity). Đề xuất bổ sung: ràng buộc an sinh <b>Displacedᵢ ≤ 5%·Lᵢ</b> (Câu 9.4.4) và sàn ngân sách đào tạo tối thiểu cho vùng/ngành yếu để bảo đảm công bằng.</div></div>`;}
+function initBai9(){const b=R.bai9_full,fl=R.bai9_flows;
+mkChart('c9_net',{type:'bar',data:{labels:b.sectors,datasets:[{label:'Việc làm ròng',data:b.rows.map(r=>r[3]),backgroundColor:b.rows.map(r=>r[3]>=0?'rgba(74,222,128,.8)':'rgba(251,113,133,.8)'),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'việc làm ròng'}},x:{ticks:{maxRotation:40,font:{size:10}}}}}});
+// "Sankey/swimming-lane" xấp xỉ bằng stacked bar: Việc mới / Nâng cấp / (−)Dịch chuyển cho 3 ngành dễ tổn thương
+const labels=fl.sankey.map(s=>s.sector);
+mkChart('c9_flow',{type:'bar',data:{labels,datasets:[
+ {label:'Việc mới (AI)',data:fl.sankey.map(s=>s.new),backgroundColor:COL.brand,borderRadius:4,stack:'g'},
+ {label:'Nâng cấp (đào tạo)',data:fl.sankey.map(s=>s.up),backgroundColor:COL.green,borderRadius:4,stack:'g'},
+ {label:'Dịch chuyển (mất việc)',data:fl.sankey.map(s=>-s.disp),backgroundColor:COL.red,borderRadius:4,stack:'g'},
+ {label:'Ròng',type:'line',data:fl.sankey.map(s=>s.net),borderColor:COL.gold,borderWidth:3,pointRadius:5,pointBackgroundColor:COL.gold}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(Math.abs(c.parsed.y),0)}}},scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'số việc làm'}}}}});}
+
+// ============ BÀI 10 ============
+function renderBai10(){const b=R.bai10,ex=R.bai10_extra;
+const sn={s1:'Bùng nổ AI (30%)',s2:'Cơ sở (45%)',s3:'Trì trệ (20%)',s4:'Khủng hoảng (5%)'};
+const drows=Object.keys(b.detZ).map(s=>`<tr><td>${sn[s]}</td><td class="mono">${fmt(b.ps[s]*100,0)}%</td><td class="mono">${fmt(b.detZ[s],0)}</td></tr>`).join('');
+return `<div class="crumb">Cấp độ Khó · Bài 10/12</div><h1>Quy hoạch ngẫu nhiên 2 giai đoạn</h1>
+<p class="sub">Phân bổ ngân sách số dưới bất định về kịch bản phát triển AI, dùng mô hình stochastic 2-stage với biến điều chỉnh (recourse).</p>
+<div class="objective">🎯 <b>Mục tiêu:</b> Giải SP 2-stage; tính giá trị của lời giải ngẫu nhiên (VSS) và giá trị thông tin hoàn hảo (EVPI).</div>
+${secH('Σ',COL.brand,'Mô hình toán học','quyết định "ở đây – bây giờ" + điều chỉnh theo kịch bản')}
+${model('Stochastic Programming 2 giai đoạn (recourse)',
+ ['\\max\\; \\sum_j b^0_j x_j + \\mathbb{E}_{s}\\Big[\\sum_j b^s_j y_{sj}\\Big] = \\max\\; \\sum_j b^0_j x_j + \\sum_s p_s\\sum_j b^s_j y_{sj}'],
+ '<code>x_j</code> quyết định giai đoạn 1 (trước khi biết kịch bản) · <code>y_{sj}</code> điều chỉnh giai đoạn 2 (sau khi kịch bản s xảy ra, xác suất <code>p_s</code>) · <code>b^s_j</code> hiệu quả theo kịch bản. 4 kịch bản: bùng nổ AI 30%, cơ sở 45%, trì trệ 20%, khủng hoảng 5%.',
+ [['\\textstyle\\sum_j x_j \\le 65000','ngân sách giai đoạn 1'],
+  ['\\textstyle\\sum_j y_{sj} \\le 15000\\;\\forall s','quỹ điều chỉnh mỗi kịch bản'],
+  ['y_{s,AI} \\le 0{,}5\\,x_H','điều chỉnh AI bị giới hạn bởi nhân lực đã đầu tư']])}
+${code('bai10','Stochastic 2-stage bằng Pyomo; tính VSS & EVPI')}
+
+${secH('1',COL.green,'Lời giải ngẫu nhiên','Câu 10.4.1')}
+<div class="stats">${stat('Z_SP',fmt(b.Zsp,0),'kỳ vọng tối ưu',COL.green)}${stat('Z_WS',fmt(b.Zws,0),'wait-and-see',COL.blue)}${stat('VSS',fmt(b.VSS,0),'giá trị mô hình SP',COL.gold)}${stat('EVPI',fmt(b.EVPI,0),'giá trị thông tin',COL.purple)}</div>
+<div class="tbl"><table><thead><tr><th>Kịch bản</th><th>Xác suất</th><th>GDP tăng</th></tr></thead><tbody>${drows}</tbody></table></div>
+<div class="chart-card"><h4>Kết quả theo kịch bản (giai đoạn 2)</h4><div class="cbox"><canvas id="c10_sc"></canvas></div></div>
+
+${secH('2',COL.gold,'VSS & EVPI — diễn giải','Câu 10.4.2')}
+${check('Trong mô hình tuyến tính đơn giản hóa này, VSS = EVPI = 0: lời giải EV (dùng kỳ vọng) và SP cho cùng cơ cấu giai đoạn 1 (dồn vốn vào AI vì hệ số cao nhất ở mọi kịch bản). <b>Đây là kết quả đáng lưu ý</b> — chỉ khi recourse phi tuyến hoặc có chi phí phạt thì VSS &gt; 0. Bài học: giá trị của tư duy xác suất phụ thuộc cấu trúc bài toán.',true)}
+<div class="note">Kịch bản xấu nhất (khủng hoảng) cho GDP tăng chỉ ${fmt(ex.worst_case,0)} — chênh ${fmt(b.detZ.s1-ex.worst_case,0)} so với bùng nổ AI. Dù first-stage giống nhau, recourse giúp "co giãn" theo kịch bản, giảm thiệt hại đuôi.</div>
+
+${secH('💬',COL.soft,'Thảo luận','Câu 10.5')}
+<div class="qa"><div class="q">a) Khi nào nên dùng mô hình ngẫu nhiên?</div><div class="a">Khi quyết định "không thể đảo ngược" phải ra <b>trước</b> khi biết tương lai, và có cơ chế điều chỉnh sau. Nếu mô hình tuyến tính &amp; recourse rộng, lời giải tất định có thể đủ tốt (VSS≈0).</div></div>
+<div class="qa"><div class="q">b) Ý nghĩa EVPI?</div><div class="a">EVPI = giá trị tối đa nên trả cho thông tin hoàn hảo về tương lai. Ở đây EVPI=0 ⇒ không đáng đầu tư vào dự báo kịch bản cho <i>quyết định này</i> — tiền nên dồn cho hành động.</div></div>`;}
+function initBai10(){const b=R.bai10;const sn=['Bùng nổ','Cơ sở','Trì trệ','Khủng hoảng'];
+mkChart('c10_sc',{type:'bar',data:{labels:sn,datasets:[{label:'GDP tăng',data:['s1','s2','s3','s4'].map(s=>b.detZ[s]),backgroundColor:[COL.green,COL.brand,COL.gold,COL.red],borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'GDP tăng (ngh.tỷ)'}}}}});}
+
+// ============ BÀI 11 ============
+function renderBai11(){const b=R.bai11;
+const cmp=b.compare;const best=Object.entries(cmp).sort((a,c)=>c[1][0]-a[1][0])[0][0];
+const polCards=b.policies.map(p=>`<div class="pol-card"><div class="pc-h"><span class="pc-e">${p.emoji}</span><span class="pc-b">${p.badge}</span></div><div class="pc-d">${p.desc}</div><div class="pc-s">${p.state}</div><div class="pc-a">→ <b>${p.action}</b></div><div class="pc-q">Q* = ${fmt(p.Q,2)}</div></div>`).join('');
+const cmpRows=Object.entries(cmp).map(([k,v])=>`<tr><td>${k}</td><td class="mono ${k===best?'win':''}">${fmt(v[0],2)}</td><td class="mono">±${fmt(v[1],2)}</td></tr>`).join('');
+return `<div class="crumb">Cấp độ Khó · Bài 11/12</div><h1>Q-learning — chính sách đầu tư thích ứng</h1>
+<p class="sub">Học tăng cường tìm chính sách phân bổ ngân sách tối ưu theo trạng thái nền kinh tế (MDP rời rạc 81 trạng thái × 5 hành động).</p>
+<div class="objective">🎯 <b>Mục tiêu:</b> Huấn luyện Q-learning với exploring starts; trích chính sách tối ưu π*(s); chứng minh π* vượt mọi luật cố định.</div>
+${secH('Σ',COL.brand,'Mô hình toán học','MDP: trạng thái (GDP, Số hóa, AI, Thất nghiệp) ∈ {thấp,TB,cao}')}
+${model('Quá trình quyết định Markov (MDP) & cập nhật Q-learning',
+ ['Q(s,a) \\leftarrow Q(s,a) + \\alpha\\big[r + \\gamma\\max_{a\'} Q(s\',a\') - Q(s,a)\\big]',
+  '\\pi^{*}(s) = \\arg\\max_a Q^{*}(s,a),\\qquad r = 0{,}40\\,\\Delta GDP - 0{,}25\\,\\Delta U - 0{,}20\\,\\text{Cyber} - 0{,}15\\,\\text{Emis}'],
+ '<b>Trạng thái</b> s = (GDP, Số hóa D, AI, Thất nghiệp), mỗi chiều 3 mức ⇒ 81 trạng thái. <b>5 hành động</b>: Truyền thống, Cân bằng, Số hóa nhanh, AI dẫn dắt, Bao trùm. <code>α=0,1</code> tốc độ học, <code>γ=0,95</code> chiết khấu. Cơ chế then chốt: <b>độ sẵn sàng AI chỉ tăng nhờ đầu tư Số hóa &amp; Nhân lực</b>, không tăng do chi AI trực tiếp ⇒ buộc phải xây nền trước.',
+ [['s \\in \\{0,1,2\\}^4','81 trạng thái rời rạc'],
+  ['a \\in \\{0,1,2,3,4\\}','5 hành động ngân sách'],
+  ['\\text{exploring starts}','reset ngẫu nhiên ⇒ mọi trạng thái hội tụ']])}
+${code('bai11','Q-learning với exploring starts (15.000 episodes)')}
+
+${secH('1',COL.green,'Chính sách tối ưu π*','Câu 11.4.1 · hành động tốt nhất theo trạng thái')}
+<div class="pol-grid">${polCards}</div>
+${check('Chính sách <b>thích ứng theo trạng thái</b>: trạng thái có nền số &amp; AI cao → "<b>AI dẫn dắt</b>"; trạng thái AI mạnh nhưng số hóa yếu → "<b>Số hóa nhanh</b>" (vá lỗ hổng nền tảng trước); trạng thái thất nghiệp cao/nền yếu → "<b>Bao trùm</b>" (ưu tiên việc làm). Đây chính là tư duy "đúng việc, đúng lúc".')}
+
+${secH('2',COL.gold,'Đường cong học','Câu 11.4.2 · phúc lợi tăng theo episode')}
+<div class="chart-card"><h4>Phúc lợi tích lũy (greedy từ trạng thái VN 2026) theo quá trình học</h4><p class="cap">Agent cải thiện từ ${fmt(b.curve[0],1)} → ${fmt(b.curve[b.curve.length-1],1)} khi học đủ kinh nghiệm.</p><div class="cbox"><canvas id="c11_curve"></canvas></div></div>
+
+${secH('3',COL.purple,'π* vs luật cố định','Câu 11.4.3 · đánh giá trên trạng thái khởi đầu ngẫu nhiên')}
+<div class="tbl"><table><thead><tr><th>Chính sách</th><th>Phúc lợi TB</th><th>Độ lệch chuẩn</th></tr></thead><tbody>${cmpRows}</tbody></table></div>
+<div class="chart-card"><h4>So sánh phúc lợi trung bình</h4><div class="cbox sm"><canvas id="c11_cmp"></canvas></div></div>
+${check('<b>π* (Q-learning) thắng mọi luật cố định</b>: '+fmt(cmp['π* (Q-learning)'][0],2)+' so với "Luôn AI dẫn dắt" '+fmt(cmp['Luôn AI dẫn dắt'][0],2)+', "Cân bằng" '+fmt(cmp['Luôn Cân bằng'][0],2)+', "Random" '+fmt(cmp['Random'][0],2)+'. Vì π* biết <b>khi nào</b> xây nền số, <b>khi nào</b> tăng tốc AI — còn luật "luôn AI" thất bại ở trạng thái chưa có nền (rủi ro mạng cao).')}
+
+${secH('💬',COL.soft,'Thảo luận','Câu 11.5')}
+<div class="qa"><div class="q">a) Vì sao chính sách thích ứng tốt hơn luật cố định?</div><div class="a">Vì hiệu quả mỗi hành động phụ thuộc trạng thái: đổ AI khi chưa có nền số gây rủi ro mạng &amp; lãng phí. π* sắp xếp <b>số hóa → AI → bao trùm</b> đúng thời điểm, nên vượt mọi luật một-kích-cỡ.</div></div>
+<div class="qa"><div class="q">b) Hạn chế của mô hình RL này?</div><div class="a">Trạng thái rời rạc hóa thô (3 mức), phần thưởng do người thiết kế (chuẩn hóa giá trị), môi trường mô phỏng đơn giản. Là <b>công cụ khám phá chiến lược</b>, không phải dự báo chính xác — cần kiểm định với chuyên gia.</div></div>`;}
+function initBai11(){const b=R.bai11;
+const xs=b.curve.map((_,i)=>i*300);
+mkChart('c11_curve',{type:'line',data:{labels:xs,datasets:[{label:'Phúc lợi',data:b.curve,borderColor:COL.brand,backgroundColor:'rgba(45,212,191,.12)',borderWidth:2.5,fill:true,tension:.35,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'phúc lợi tích lũy'}},x:{title:{display:true,text:'episode'}}}}});
+const cmp=b.compare,keys=Object.keys(cmp);
+mkChart('c11_cmp',{type:'bar',data:{labels:keys.map(k=>k.replace(' (Q-learning)','')),datasets:[{data:keys.map(k=>cmp[k][0]),backgroundColor:keys.map(k=>k.includes('Q-learning')?COL.green:'#5B6478'),borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'phúc lợi TB'}}}}});}
+
+// ============ BÀI 12 ============
+function renderBai12(){
+const scen=[['🏛️','S1 Truyền thống','70% K + 10% mỗi loại',COL.soft],['🚀','S2 Số hóa nhanh','25K+45D+15AI+15H',COL.blue],['🤖','S3 AI dẫn dắt','20K+20D+45AI+15H',COL.green],['🌍','S4 Bao trùm số','30K+20D+10AI+40H',COL.gold],['⚖️','S5 Tối ưu cân bằng','Mô hình tự chạy',COL.brand]];
+const cards=scen.map(([e,n,d,c])=>`<div class="scard"><div class="top"><span class="emoji">${e}</span></div><h4>${n}</h4><div class="desc">${d}</div></div>`).join('');
+return `<div class="crumb">Cấp độ Khó · Bài 12/12</div><h1>AIDEOM-VN — Nguyên mẫu tích hợp 6 module</h1>
+<p class="sub">Đồ án tổng kết: tích hợp Bài 1–11 thành hệ thống hỗ trợ ra quyết định 6 module với dashboard 5 kịch bản chính sách.</p>
+<div class="objective">🎯 <b>Mục tiêu:</b> 6 module nhóm thành 4 tab — Dự báo &amp; Sẵn sàng (M1·M2), Phân bổ &amp; Lao động (M3·M4), Rủi ro (M5), Dashboard (M6) — minh họa cách các mô hình liên kết thành một quy trình chính sách hoàn chỉnh.</div>
+
+${secH('Σ',COL.brand,'Khung tích hợp toán học','luồng dữ liệu giữa 6 module')}
+${model('Hệ thống hỗ trợ ra quyết định tích hợp (DSS)',
+ ['\\underbrace{Y_t}_{M1} \\to \\underbrace{C_i^{*}}_{M2} \\to \\underbrace{\\max\\sum\\beta_{rj}x_{rj}}_{M3} \\to \\underbrace{\\text{Net}_i\\ge0}_{M4} \\to \\underbrace{\\mathbf{F}(x),\\mathbb{E}_s[\\cdot]}_{M5} \\to \\underbrace{\\pi^{*}(s)}_{M6}'],
+ 'Đầu ra của module trước là đầu vào của module sau: dự báo GDP (M1·Bài 1) định mức ngân sách; xếp hạng vùng (M2·Bài 6) định ưu tiên; tối ưu phân bổ (M3·Bài 4,8) ra cơ cấu đầu tư; mô phỏng lao động (M4·Bài 9) kiểm tra việc làm; đánh giá rủi ro (M5·Bài 7,10) sàng lọc; dashboard RL (M6·Bài 11) đề xuất chính sách thích ứng.',
+ [['M1{\\to}M3','dự báo định mức ngân sách'],
+  ['M2{\\to}M3','ưu tiên vùng vào hàm mục tiêu'],
+  ['M4,M5{\\to}M6','ràng buộc việc làm &amp; rủi ro lọc chính sách']])}
+
+<div class="tabs">
+<button class="tab active" data-tab="t1">Dự báo & Sẵn sàng</button>
+<button class="tab" data-tab="t2">Phân bổ & Lao động</button>
+<button class="tab" data-tab="t3">Đánh giá rủi ro</button>
+<button class="tab" data-tab="t4">Dashboard</button>
+</div>
+
+<div class="tabpane active" id="t1">
+${secH('📈',COL.green,'M1 — Dự báo kinh tế','Cobb-Douglas 2026–2030 (Bài 1)')}
+<div class="chart-card"><h4>Quỹ đạo GDP 5 kịch bản chính sách</h4><p class="cap">Mô phỏng GDP theo từng cơ cấu phân bổ K/D/AI/H. Kịch bản cân bằng (S5) cho quỹ đạo cao &amp; bền.</p><div class="cbox"><canvas id="c12_gdp"></canvas></div></div>
+${secH('🎯',COL.teal,'M2 — Đánh giá sẵn sàng số','TOPSIS + Entropy (Bài 6)')}
+<div class="note">M2 xếp hạng 6 vùng theo mức sẵn sàng AI: Đông Nam Bộ (chuyên gia) &amp; ĐB sông Hồng (entropy) dẫn đầu — ưu tiên đặt trung tâm AI quốc gia, đồng thời nâng đỡ vùng yếu để bảo đảm công bằng (liên kết ràng buộc C5 của M3).</div>
+</div>
+
+<div class="tabpane" id="t2">
+${secH('🗺️',COL.brand,'M3 — Tối ưu phân bổ','LP vùng-ngành + tối ưu động (Bài 4 & 8)')}
+<div class="note">Phân bổ 50.000 tỷ với ràng buộc công bằng vùng (λ≤0,65 để khả thi); kết hợp quỹ đạo đầu tư động 10 năm theo hướng front-loaded.</div>
+${secH('👥',COL.gold,'M4 — Mô phỏng lao động','NetJob từng ngành (Bài 9)')}
+<div class="note">Tính việc làm ròng (~1,43 triệu) dưới tác động AI; ràng buộc tốc độ tự động hóa ≤ năng lực đào tạo lại — nút thắt chính của chuyển đổi công bằng.</div>
+</div>
+
+<div class="tabpane" id="t3">
+${secH('🎲',COL.red,'M5 — Đánh giá rủi ro','NSGA-II đa mục tiêu + Stochastic (Bài 7 & 10)')}
+<div class="note">Đánh giá rủi ro mạng, môi trường &amp; phụ thuộc qua tập Pareto 100 nghiệm (M5a) và quy hoạch ngẫu nhiên 2 giai đoạn (M5b) — chọn phương án thỏa hiệp C*=0,847.</div>
+${secH('⚙️',COL.purple,'Kiến trúc 6 module','Độ phức tạp tương đối')}
+<div class="chart-card"><h4>Sơ đồ độ phức tạp module</h4><div class="cbox sm"><canvas id="c12_mod"></canvas></div></div>
+</div>
+
+<div class="tabpane" id="t4">
+${secH('📊',COL.green,'M6 — Dashboard ra quyết định','5 kịch bản chính sách (Mục 15)')}
+<div class="scards">${cards}</div>
+<div class="note">Module RL (Bài 11) khuyến nghị chính sách <b>thích ứng</b> thay vì cố định: tùy trạng thái nền kinh tế mà chọn Số hóa nhanh → AI dẫn dắt → Bao trùm. Đây là "bộ não" của dashboard.</div>
+<div class="footnote">Đồ án nhóm 3–4 người, 4–6 tuần. Sản phẩm: mã Python ≥1.500 dòng (GitHub), dashboard Streamlit, báo cáo 15–25 trang, slide + video demo. Mọi số liệu trên trang này đều tính bằng Python (numpy/scipy/PuLP/pymoo) và tái lập được.</div>
+</div>
+`;}
+function initBai12(){
+const pg=document.getElementById('page-bai12');
+pg.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  pg.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===t));
+  pg.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('active',p.id===t.dataset.tab));
+  Object.values(charts).forEach(c=>{try{c.resize();}catch(e){}});
+}));
+mkChart('c12_mod',{type:'bar',data:{labels:['M1 Dự báo','M2 Sẵn sàng','M3 Phân bổ','M4 Lao động','M5 Rủi ro','M6 Dashboard'],datasets:[{label:'Độ phức tạp',data:[3,4,5,4,5,3],backgroundColor:[COL.green,COL.teal,COL.brand,COL.gold,COL.red,COL.purple],borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false}}}});
+const years=[2026,2027,2028,2029,2030];
+const a=0.33,bc=0.42,g=0.10,d=0.08,th=0.07;
+const scen={'S1':[.70,.10,.10,.10],'S2':[.25,.45,.15,.15],'S3':[.20,.20,.45,.15],'S4':[.30,.20,.10,.40],'S5':[.25,.25,.30,.20]};
+const cols={'S1':COL.soft,'S2':COL.blue,'S3':COL.green,'S4':COL.gold,'S5':COL.brand};
+const ds=[];
+for(const[name,al]of Object.entries(scen)){
+ let K=27500,D=20.3,AI=86,H=30,A=33.70,L0=53.9,budget=3000;
+ const tr=[A*Math.pow(K,a)*Math.pow(L0,bc)*Math.pow(D,g)*Math.pow(AI,d)*Math.pow(H,th)];
+ for(let t=0;t<4;t++){K=.95*K+al[0]*budget;D=.88*D+al[1]*budget*.01;AI=.85*AI+al[2]*budget*.05;H=H+.8*al[3]*budget*.01-.02*H;A=A*(1+.003*(D/100)+.002*(AI/100)+.004*(H/100));const L=L0*Math.pow(1.009,t+1);tr.push(A*Math.pow(K,a)*Math.pow(L,bc)*Math.pow(D,g)*Math.pow(AI,d)*Math.pow(H,th));}
+ ds.push({label:name,data:tr,borderColor:cols[name],borderWidth:name=='S5'?3:2,tension:.3,pointRadius:3});
+}
+mkChart('c12_gdp',{type:'line',data:{labels:years,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{title:{display:true,text:'GDP (ngh.tỷ)'}}}}});}
+
+// ============ ROUTER ============
+const PAGES={home:[renderHome,initHome],bai1:[renderBai1,initBai1],bai2:[renderBai2,initBai2],bai3:[renderBai3,initBai3],
+bai4:[renderBai4,initBai4],bai5:[renderBai5,initBai5],bai6:[renderBai6,initBai6],
+bai7:[renderBai7,initBai7],bai8:[renderBai8,initBai8],bai9:[renderBai9,initBai9],
+bai10:[renderBai10,initBai10],bai11:[renderBai11,initBai11],bai12:[renderBai12,initBai12]};
+const rendered={};
+let currentPage='home';
+function renderKatex(pg){
+  // render công thức hiển thị (display): .formula cũ + .model .eq mới
+  pg.querySelectorAll('.formula[data-tex],.model .eq[data-tex]').forEach(el=>{
+    try{if(typeof katex!=='undefined')katex.render(el.dataset.tex,el,{displayMode:true,throwOnError:false});else el.textContent=el.dataset.tex;}
+    catch(e){el.textContent=el.dataset.tex;}
+  });
+  // render công thức trong dòng (inline): danh sách ràng buộc .constraints .cx
+  pg.querySelectorAll('.constraints .cx[data-tex]').forEach(el=>{
+    try{if(typeof katex!=='undefined')katex.render(el.dataset.tex,el,{displayMode:false,throwOnError:false});else el.textContent=el.dataset.tex;}
+    catch(e){el.textContent=el.dataset.tex;}
+  });
+}
+function show(pid){
+ currentPage=pid;
+ document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===pid));
+ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+ const pg=document.getElementById('page-'+pid);pg.classList.add('active');
+ if(!rendered[pid]){pg.innerHTML=PAGES[pid][0]();rendered[pid]=true;renderKatex(pg);}
+ PAGES[pid][1]();
+ document.getElementById('sidebar').classList.remove('open');
+ window.scrollTo(0,0);location.hash=pid;
+}
+document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>show(n.dataset.page)));
+// điểm Pareto Bài 7 (tính bằng pymoo NSGA-II, seed=42) — dùng trong initBai7
+R.bai7_pts = R.bai7_pts || [[61336.5, 146.1, 6651.9], [55046.8, 1817.8, 136.2], [54942.0, 34.7, 4079.4], [57979.1, 1626.8, 281.7], [63195.3, 1260.9, 5000.6], [41506.9, 206.0, 324.8], [50720.5, 876.7, 102.4], [61228.4, 134.7, 6388.6], [62238.7, 207.7, 5782.3], [44826.6, 165.2, 829.1], [59898.8, 686.9, 2705.3], [47142.6, 143.2, 945.1], [61697.5, 567.3, 4516.9], [55980.2, 76.3, 4299.2], [62732.4, 921.1, 5133.5], [62615.5, 1344.5, 4894.2], [43263.9, 95.7, 707.8], [62779.9, 971.6, 5349.1], [60649.2, 450.9, 2277.0], [60744.1, 598.5, 3209.9], [58616.1, 530.1, 2007.8], [53055.2, 352.1, 939.5], [49025.3, 225.5, 670.4], [42629.1, 86.8, 791.5], [56954.0, 345.6, 1168.2], [60668.6, 1000.3, 3050.6], [58537.6, 1476.2, 359.9], [44075.7, 136.4, 629.3], [61234.5, 299.4, 5608.8], [50362.6, 388.9, 235.4], [60423.6, 1632.3, 2099.8], [55503.6, 110.7, 4113.8], [51662.3, 786.2, 165.2], [61224.3, 752.3, 3573.5], [61148.5, 130.7, 6524.5], [62514.6, 1160.6, 5299.1], [60067.7, 333.8, 3249.5], [47311.9, 176.4, 945.1], [59384.4, 1736.0, 657.6], [58604.8, 203.7, 2568.7], [61801.4, 852.5, 4512.0], [54276.8, 427.4, 209.8], [61618.0, 1247.9, 3515.0], [58025.4, 1529.8, 219.3], [60986.2, 1174.4, 2961.0], [61548.4, 467.1, 3773.7], [59903.7, 423.6, 2871.4], [60647.7, 885.2, 2174.3], [56556.0, 1116.6, 143.5], [59567.2, 1522.5, 910.4], [61793.0, 833.0, 4232.0], [47694.8, 188.3, 516.2], [54455.4, 643.1, 412.4], [57086.2, 243.8, 1814.8], [60264.3, 443.9, 2761.3], [59210.2, 281.6, 1525.7], [48941.1, 202.6, 914.1], [41602.8, 210.2, 383.5], [60430.4, 382.3, 3977.8], [62094.6, 594.2, 5503.4], [55079.2, 1811.8, 158.5], [59989.9, 794.1, 1238.2], [42150.4, 174.2, 506.0], [57218.9, 1417.3, 253.2], [57362.9, 1421.6, 294.8], [62225.4, 1093.6, 4942.7], [57714.4, 1216.9, 220.1], [58577.9, 118.4, 1613.2], [61266.6, 812.3, 3624.3], [62881.4, 1208.7, 5202.3], [55669.4, 1383.6, 129.4], [59395.3, 1737.4, 663.8], [52236.5, 284.7, 444.3], [58152.1, 400.3, 1406.3], [57569.6, 337.6, 1249.7], [47801.4, 857.9, 106.4], [54643.5, 69.3, 4069.6], [61958.9, 398.6, 5503.1], [58996.0, 934.5, 432.9], [62993.6, 1304.9, 5051.3], [60288.6, 1349.6, 2093.4], [52661.4, 372.4, 481.9], [48456.1, 288.7, 392.5], [51230.2, 922.5, 127.6], [58589.2, 497.4, 1480.1], [51296.7, 1299.7, 124.8], [54328.1, 267.6, 1327.6], [61516.4, 1028.1, 3349.5], [58924.0, 1172.9, 330.4], [44612.0, 171.1, 848.2], [61357.3, 1009.1, 3343.6], [55425.9, 69.8, 4220.6], [57386.4, 254.1, 1814.8], [60538.2, 401.7, 3917.5], [57611.2, 1118.5, 307.8], [55653.4, 41.3, 4233.0], [61308.4, 1064.9, 3243.8], [58498.3, 492.4, 1249.7], [57860.8, 950.0, 210.1], [62365.7, 1263.0, 5005.1]];
+// ===== THEME =====
+function applyChartTheme(){
+  if(typeof Chart==='undefined')return;
+  const dark=document.body.getAttribute('data-theme')!=='light';
+  Chart.defaults.color=dark?'#94A3B8':'#475569';
+  Chart.defaults.borderColor=dark?'rgba(45,212,191,.12)':'rgba(0,0,0,.07)';
+}
+function setTheme(t){
+  if(t==='light') document.body.setAttribute('data-theme','light');
+  else document.body.removeAttribute('data-theme');
+  const btn=document.getElementById('themeBtn'); if(btn) btn.textContent = t==='light'?'☾':'☀';
+  try{localStorage.setItem('aideom-term-theme',t);}catch(e){}
+  applyChartTheme();
+  rendered[currentPage]=false;
+  show(currentPage);
+}
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  setTheme(document.body.getAttribute('data-theme')==='light'?'dark':'light');
+});
+(function initTheme(){
+  let t='dark';
+  try{t=localStorage.getItem('aideom-term-theme')||'dark';}catch(e){}
+  if(t==='light'){document.body.setAttribute('data-theme','light');}else{document.body.removeAttribute('data-theme');}
+  const b=document.getElementById('themeBtn');if(b)b.textContent=(t==='light'?'☾':'☀');
+  applyChartTheme();
+})();
+window.addEventListener('error',function(e){
+  if(typeof Chart==='undefined'){const w=document.getElementById('cdnWarn');if(w)w.style.display='block';}
+});
+window.addEventListener('load',()=>{
+  if(typeof Chart==='undefined'){const w=document.getElementById('cdnWarn');if(w)w.style.display='block';}
+  try{const h=location.hash.replace('#','');show(PAGES[h]?h:'home');}
+  catch(err){console.error(err);const m=document.querySelector('.main');if(m)m.innerHTML='<div style="padding:30px;color:var(--ink)">Đã xảy ra lỗi khi hiển thị: '+(err&&err.message||err)+'</div>';}
+});
+</script>
+</body>
+</html>
